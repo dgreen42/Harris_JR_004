@@ -226,14 +226,14 @@ npf1b_t_cts <- t_cts[t_cts$GENEID == "gene_biotype mRNA; MtrunA17_Chr8g0390331",
 
 dxd <- DEXSeqDataSet(round(t_cts[,2:ncol(t_cts)]),
                      coldata,
-                     design = ~treatment + exon + tissue:exon,
+                     design = ~sample + exon + treatment:exon,
                      featureID = rownames(t_cts),
                      groupID = t_cts$GENEID)
 
 dxd = estimateSizeFactors(dxd)
 dxd = estimateDispersions(dxd)
 plotDispEsts(dxd)
-dxd = testForDEU(dxd, fullModel = ~treatment + exon + tissue:exon, reducedModel = ~treatment + exon)
+dxd = testForDEU(dxd, fullModel = ~sample + exon + treatment:exon, reducedModel = ~sample + exon)
 dxd = estimateExonFoldChanges(dxd, fitExpToVar = "tissue")
 dxr = DEXSeqResults(dxd)
 nrow_padj <- table(dxr$padj < 0.1)[2]
@@ -253,9 +253,9 @@ padj01
 plotMA(dxr, ylim = c(-10, 10))
 write.csv(apply(dxr_df, 2, as.character), file = "./dxr.csv")
 
-plotDEXSeq(dxr, "MtrunA17_Chr5g0427811", legend = T, displayTranscripts = T, fitExpToVar = "tissue")
-plotDEXSeq(dxr, "MtrunA17_Chr8g0390331", legend = T, displayTranscripts = T, fitExpToVar = "tissue")
-plotDEXSeq(dxr, "BambuTx1", legend = T, displayTranscripts = T, fitExpToVar = "tissue")
+plotDEXSeq(dxr, "MtrunA17_Chr5g0427811", legend = T, displayTranscripts = T, fitExpToVar = "treatment")
+plotDEXSeq(dxr, "MtrunA17_Chr8g0390331", legend = T, displayTranscripts = T, fitExpToVar = "treatment")
+plotDEXSeq(dxr, "BambuTx1", legend = T, displayTranscripts = T, fitExpToVar = "treatment")
 
 
 dxd <- DEXSeqDataSet(round(t_cts[,2:ncol(t_cts)]),
@@ -279,10 +279,3 @@ dxr[196998,]
 
 
 
-
-library(pasilla)
-data(pasillaDEXSeqDataSet, package="pasilla")
-dxd <- estimateSizeFactors( dxd )
-dxd <- estimateDispersions( dxd )
-dxd <- testForDEU( dxd )
-dxr <- DEXSeqResults( dxd )
