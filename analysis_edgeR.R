@@ -1,8 +1,10 @@
+library(Rsubread)
+library(openxlsx)
 library(edgeR)
 library(bambu)
+library(Repitools)
 library(ggplot2)
 library(RColorBrewer)
-library(Rsubread)
 
 genome <- file.path("./MtrunA17r5.0-20161119-ANR.genome.fasta")
 annotation <- file.path("./MtrunA17r5.0-ANR-EGN-r1.9.gtf")
@@ -10,11 +12,11 @@ prepAnno <- prepareAnnotations(annotation)
 samples <- list.files(path = "./aln", recursive = T, full.names = T)
 
 #CHANGE NDR
-analysis <- bambu(reads = samples, annotations = prepAnno, genome = genome, lowMemory = T, NDR = 0.4)
-saveRDS(analysis, file = "./bambu_out_NDR_4/bambu_analysis.rds")
+analysis <- bambu(reads = samples, annotations = prepAnno, genome = genome, NDR = 0.7)
+saveRDS(analysis, file = "./bambu_out_NDR_7/bambu_analysis.rds")
 
-writeBambuOutput(analysis, path = "./bambu_out_NDR_4/", prefix = "Harris_JR_RNA_004_NDR_4")
-writeToGTF(rowRanges(analysis), file = "./bambu_out_NDR_4/Harris_JR_RNA_004_NDR_4_extended_anntation.gtf")
+writeBambuOutput(analysis, path = "./bambu_out_NDR_7/", prefix = "Harris_JR_RNA_004_NDR_7")
+writeToGTF(rowRanges(analysis), file = "./bambu_out_NDR_7/Harris_JR_RNA_004_NDR_7_extended_anntation.gtf")
 
 rm(prepAnno)
 
@@ -40,24 +42,38 @@ dev.off()
 
 #following example -------------------------------------------
 
-cts <- read.delim("./bambu_out_NDR_3/Harris_JR_RNA_004_NDR_3counts_transcript.tsv")
-#rds <- readRDS("./bambu_out_NDR_3/Harris_JR_RNA_004_NDR_3counts_transcript.tsv")
-analysis <- readRDS("./bambu_out_NDR_2/bambu_analysis.rds")
-plotBambu(analysis, type = "annotation", gene_id = "gene_biotype repeat_region; repeat_region13464")
+analysis <- readRDS("./bambu_out_NDR_3/bambu_analysis.rds")
+plotBambu(analysis, type = "annotation", gene_id = "gene_biotype mRNA; MtrunA17_Chr1g0200031")
 cts <- assay(analysis)
 head(cts)
 
+cts <- read.delim("./bambu_out_NDR_3/Harris_JR_RNA_004_NDR_3counts_transcript.tsv")
 rownames(cts) <- cts$TXNAME
 cts <- cts[,2:ncol(cts)]
 head(cts)
+
+
 group <- rep(c("nod" ,"irt" ,"mrt"), 3)
 
-anno <- readFromGTF("MtrunA17r5.0-ANR-EGN-r1.9.gtf")
-anno <- read.delim("./bambu_out_NDR_2/Harris_JR_RNA_004_NDR_2_extended_anntation.gtf", header = T)
-anno <- read.gff("MtrunA17r5.0-ANR-EGN-r1.9.gff3", GFF3 = T)
-anno <- readFromGTF("./bambu_out_NDR_4/Harris_JR_RNA_004_NDR_4_extended_anntation.gtf")
+anno_path <- "./bambu_out_NDR_3/Harris_JR_RNA_004_NDR_3_extended_anntation.gtf"
+anno <- readFromGTF(anno_path)
 
-dge <- DGEList(counts = cts, group = group, gene = anno)
+#feature counts from Rsubread`
+features <- featureCounts(samples,
+                          annot.ext = anno_path,
+                          isGTFAnnotationFile = T,
+                          isLongRead = T,
+                          strandSpecific = rep(1, length(samples)),
+                          genome = genome
+)
+
+dge <- DGEList(counts = features$counts, group = group, genes = features$annotation)
+
+anno_df <- as.data.frame(anno)
+head(anno_df)
+
+dge <- DGEList(counts = cts, group = group)
+head(dge)
 
 expDesign <- model.matrix(~0+group, data = dge$samples)
 colnames(expDesign) <- levels(dge$samples$group)
@@ -79,12 +95,35 @@ qlfIRTvsNOD <- glmQLFTest(fit, contrast = IRTvsNOD)
 topTags(qlfIRTvsNOD)
 dexp1 <- decideTests(qlfIRTvsNOD, p.value = 0.05)
 summary(dexp1)
-alt_splice_1 <- diffSpliceDGE(fit, contrast = IRTvsNOD, geneid = rownames(dge))
+alt_splice_1 <- diffSpliceDGE(fit, contrast = IRTvsNOD, geneid = "GENEID")
 top_splice <- topSpliceDGE(alt_splice_1)
+top_splice
 variants <- spliceVariants(dge, dge$genes, dge$common.dispersion)
+plot(variants$table$PValue, variants$table$logCPM)
 sig_var <- variants[variants$table$PValue < 0.01,]
 sig_var2 <- variants[variants$table$PValue < 0.0000001,]
 sig_var2
+
+write.csv(top_splice, "./IRTvsNOD_topSplice.csv")
+write.csv(sig_var, "./IRTvsNOD_variants1.csv")
+write.csv(sig_var2, "./IRTvsNOD_variants2.csv")
+
+
+xlsxName <- "IRTvsNOD.xlsx"
+wb <- createWorkbook()
+
+addWorksheet(wb, "Regulation")
+writeData(wb, sheet = 1, summary(dexp1))
+addWorksheet(wb, "Top Splice")
+writeData(wb, sheet = 2, top_splice)
+addWorksheet(wb, "Variants")
+writeData(wb, sheet = 3, variants)
+addWorksheet(wb, "Significant Variants 0.01")
+writeData(wb, sheet = 4, sig_var)
+addWorksheet(wb, "Significant Variants 10^-7")
+writeData(wb, sheet = 5, sig_var2)
+saveWorkbook(wb, xlsxName)
+
 
 IRTvsMRT <- makeContrasts(mrt-irt, levels = expDesign)
 qlfIRTvsMRT <- glmQLFTest(fit, contrast = IRTvsMRT)
@@ -118,6 +157,7 @@ topTags(qlfIRTvsMRT)
 MRTvsNOD <- makeContrasts(nod-mrt, levels = expDesign)
 qlfMRTvsNOD <- glmQLFTest(fit, contrast = MRTvsNOD)
 topTags(qlfMRTvsNOD)
+
 
 
 
