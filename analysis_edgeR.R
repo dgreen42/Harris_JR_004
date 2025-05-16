@@ -43,7 +43,7 @@ dev.off()
 #following example -------------------------------------------
 
 analysis <- readRDS("./bambu_out_NDR_3/bambu_analysis.rds")
-plotBambu(analysis, type = "annotation", gene_id = "gene_biotype mRNA; MtrunA17_Chr1g0200031")
+plotBambu(analysis, type = "annotation", gene_id = "gene_biotype mRNA; MtrunA17_Chr1g0211071")
 cts <- assay(analysis)
 head(cts)
 
@@ -52,22 +52,8 @@ rownames(cts) <- cts$TXNAME
 cts <- cts[,2:ncol(cts)]
 head(cts)
 
-
 group <- rep(c("nod" ,"irt" ,"mrt"), 3)
-
-anno_path <- "./bambu_out_NDR_3/Harris_JR_RNA_004_NDR_3_extended_anntation.gtf"
-anno <- readFromGTF(anno_path)
-
-#feature counts from Rsubread`
-features <- featureCounts(samples,
-                          annot.ext = anno_path,
-                          isGTFAnnotationFile = T,
-                          isLongRead = T,
-                          strandSpecific = rep(1, length(samples)),
-                          genome = genome
-)
-
-dge <- DGEList(counts = features$counts, group = group, genes = features$annotation)
+dge <- DGEList(counts = cts, group = group)
 
 anno_df <- as.data.frame(anno)
 head(anno_df)
@@ -90,12 +76,14 @@ dge <- estimateDisp(dge)
 fit <- glmQLFit(dge, design = expDesign, robust = TRUE)
 plotQLDisp(fit)
 
-IRTvsNOD <- makeContrasts(nod-irt, levels = expDesign)
-qlfIRTvsNOD <- glmQLFTest(fit, contrast = IRTvsNOD)
-topTags(qlfIRTvsNOD)
-dexp1 <- decideTests(qlfIRTvsNOD, p.value = 0.05)
+NODvsIRT <- makeContrasts(nod-irt, levels = expDesign)
+qlfNODvsIRT <- glmQLFTest(fit, contrast = NODvsIRT)
+lfcNODvsIRT <- data.frame(qlfNODvsIRT$genes, qlfNODvsIRT$table)
+write.csv(lfcNODvsIRT, "NODvsIRTlfc.csv")
+topTags(qlfNODvsIRT)
+dexp1 <- decideTests(qlfNODvsIRT, p.value = 0.05)
 summary(dexp1)
-alt_splice_1 <- diffSpliceDGE(fit, contrast = IRTvsNOD, geneid = "GENEID")
+alt_splice_1 <- diffSpliceDGE(fit, contrast = NODvsIRT, geneid = "GENEID")
 top_splice <- topSpliceDGE(alt_splice_1)
 top_splice
 variants <- spliceVariants(dge, dge$genes, dge$common.dispersion)
@@ -104,25 +92,47 @@ sig_var <- variants[variants$table$PValue < 0.01,]
 sig_var2 <- variants[variants$table$PValue < 0.0000001,]
 sig_var2
 
-write.csv(top_splice, "./IRTvsNOD_topSplice.csv")
-write.csv(sig_var, "./IRTvsNOD_variants1.csv")
-write.csv(sig_var2, "./IRTvsNOD_variants2.csv")
+write.csv(top_splice, "./NODvsIRT_topSplice.csv")
+write.csv(sig_var, "./NODvsIRT_variants1.csv")
+write.csv(sig_var2, "./NODvsIRT_variants2.csv")
 
+splice <- read.csv("NODvsIRT_splice.csv")
+lfcNODvsIRT$BambuTx <- rownames(lfcNODvsIRT)
+rownames(lfcNODvsIRT) <- 1:nrow(lfcNODvsIRT)
 
-xlsxName <- "IRTvsNOD.xlsx"
-wb <- createWorkbook()
+count <- 0
+spliceLFC <- data.frame(matrix(ncol = ncol(lfcNODvsIRT)))
+colnames(spliceLFC) <- colnames(lfcNODvsIRT)
+for (i in splice$GeneID) {
+    for (j in 1:nrow(lfcNODvsIRT)) {
+        if (lfcNODvsIRT$GENEID[j] == i) {
+            count = count + 1
+            spliceLFC[count,] <- lfcNODvsIRT[j,]
+            print(count)
+        }
+    }
+}
 
-addWorksheet(wb, "Regulation")
-writeData(wb, sheet = 1, summary(dexp1))
-addWorksheet(wb, "Top Splice")
-writeData(wb, sheet = 2, top_splice)
-addWorksheet(wb, "Variants")
-writeData(wb, sheet = 3, variants)
-addWorksheet(wb, "Significant Variants 0.01")
-writeData(wb, sheet = 4, sig_var)
-addWorksheet(wb, "Significant Variants 10^-7")
-writeData(wb, sheet = 5, sig_var2)
-saveWorkbook(wb, xlsxName)
+spliceLFC
+rownames(spliceLFC) <- spliceLFC$BambuTx
+spliceLFC <- spliceLFC[,1:ncol(spliceLFC)-1]
+
+write.csv(spliceLFC, "NODvsIRT_splice_DE.csv")
+
+source("utils.R")
+
+for (i in splice$GeneID) {
+    plotSpliceReg(spliceLFC, i)
+}
+    
+IRTvsNOD <- makeContrasts(irt-nod, levels = expDesign)
+qlfIRTvsNOD <- glmQLFTest(fit, contrast = IRTvsNOD)
+lfcIRTvsNOD <- data.frame(qlfIRTvsNOD$genes, qlfIRTvsNOD$table)
+write.csv(lfcIRTvsNOD, "IRTvsNODlfc.csv")
+topTags(qlfIRTvsNOD)
+dexp1 <- decideTests(qlfIRTvsNOD, p.value = 0.05)
+summary(dexp1)
+
 
 
 IRTvsMRT <- makeContrasts(mrt-irt, levels = expDesign)
@@ -148,105 +158,3 @@ points(qlfIRTvsNOD$table$logFC[tol10b.depleted], -10*log10(qlfIRTvsNOD$table$PVa
 DEXdata <- cts[tol10b.enriched | tol10b.depleted, ]
 heatmap(as.matrix(DEXdata[,2:ncol(DEXdata)]))
 
-
-IRTvsMRT <- makeContrasts(mrt-irt, levels = expDesign)
-qlfIRTvsMRT <- glmQLFTest(fit, contrast = IRTvsMRT)
-topTags(qlfIRTvsMRT)
-
-
-MRTvsNOD <- makeContrasts(nod-mrt, levels = expDesign)
-qlfMRTvsNOD <- glmQLFTest(fit, contrast = MRTvsNOD)
-topTags(qlfMRTvsNOD)
-
-
-
-
-
-#from saved counts -----------------------------------------------
-source("./utils.R")
-cts <- read.delim("./bambu_out/Harris_JR_RNA_004_counts_gene.tsv")
-cts_transcript <- read.delim("./bambu_out/Harris_JR_RNA_004_counts_transcript.tsv")
-cts_CPM <- read.delim("./bambu_out/Harris_JR_RNA_004_CPM_transcript.tsv")
-cts_full_read <- read.delim("./bambu_out/Harris_JR_RNA_004_fullLengthCounts_transcript.tsv")
-cts_unique <- read.delim("./bambu_out/Harris_JR_RNA_004_uniqueCounts_transcript.tsv")
-
-rownames(cts) <- cts$TXNAME
-cts <- cts[,2:ncol(cts)]
-head(cts)
-group <- rep(c("nod" ,"irt" ,"mrt"), 3)
-dge <- DGEList(counts = cts, group = group)
-
-expDesign <- model.matrix(~0+group, data = dge$samples)
-colnames(expDesign) <- levels(dge$samples$group)
-expDesign
-
-filterLowcts <- filterByExpr(dge, design = expDesign)
-dge <- dge[filterLowcts, ]
-
-dge <- normLibSizes(dge)
-dge <- estimateDisp(dge)
-fit <- glmQLFit(dge, design = expDesign)
-
-IRTvsNOD <- makeContrasts(nod-irt, levels = expDesign)
-qlfIRTvsNOD <- glmQLFTest(fit, contrast = IRTvsNOD)
-topTags(qlfIRTvsNOD)
-IRTvsMRT <- makeContrasts(mrt-irt, levels = expDesign)
-qlfIRTvsMRT <- glmQLFTest(fit, contrast = IRTvsMRT)
-topTags(qlfIRTvsMRT)
-MRTvsNOD <- makeContrasts(nod-mrt, levels = expDesign)
-qlfMRTvsNOD <- glmQLFTest(fit, contrast = MRTvsNOD)
-topTags(qlfMRTvsNOD)
-
-diff <- diffSpliceDGE(fit, contrast = IRTvsNOD, geneid = dge$genes$GENEID)
-topDiff <- topSpliceDGE(diff)
-write.csv(as.data.frame(topSpliceDGE(diff)), file = paste("./edgeR_out/diff_splice_", name, "IRT_NOD.csv"))
-plotSpliceDGE(diff)
-diff2 <- diffSpliceDGE(fit, contrast = IRTvsMRT, geneid = dge$genes$GENEID)
-topDiff2 <- topSpliceDGE(diff2)
-write.csv(as.data.frame(topSpliceDGE(diff2)), file = paste("./edgeR_out/diff_splice_", name, "IRT_MRT.csv"))
-plotSpliceDGE(diff2)
-diff3 <- diffSpliceDGE(fit, contrast = MRTvsNOD, geneid = dge$genes$GENEID)
-topDiff3 <- topSpliceDGE(diff3)
-write.csv(as.data.frame(topSpliceDGE(diff3)), file = paste("./edgeR_out/diff_splice_", name, "MRT_NOD.csv"))
-plotSpliceDGE(diff3)
-
-#---------------------------------------
-
-dge <- prep_dge(cts_gene)
-
-#read chapter 3 on grouping
-expDesign <- model.matrix(~0+group, data = dge$samples)
-colnames(expDesign) <- levels(dge$samples$group)
-expDesign
-
-fit <- get_fit(dge, expDesign)
-
-IRTvsNOD <- makeContrasts(nod-irt, levels = expDesign)
-qlfIRTvsNOD <- glmQLFTest(fit, contrast = IRTvsNOD)
-topTags(qlfIRTvsNOD)
-IRTvsMRT <- makeContrasts(mrt-irt, levels = expDesign)
-qlfIRTvsMRT <- glmQLFTest(fit, contrast = IRTvsMRT)
-topTags(qlfIRTvsMRT)
-MRTvsNOD <- makeContrasts(nod-mrt, levels = expDesign)
-qlfMRTvsNOD <- glmQLFTest(fit, contrast = MRTvsNOD)
-topTags(qlfMRTvsNOD)
-
-#clustering
-logcpm <- cpm(dge, log = T)
-plotMDS(logcpm)
-
-#alt exp
-alt_exp_analysis <- analyze_alt_expr(fit, dge, "counts_gene")
-alt_exp_analysis <- analyze_alt_expr(fit, dge, "counts_trancript")
-alt_exp_analysis <- analyze_alt_expr(fit, dge, "CPM_trancript")
-alt_exp_analysis <- analyze_alt_expr(fit, dge, "fullLengthCounts_trancript")
-alt_exp_analysis <- analyze_alt_expr(fit, dge, "uniqueCounts_trancript")
-
-
-topDiff <- alt_exp_analysis[[1]]
-topDiff2 <- alt_exp_analysis[[2]]
-topDiff3 <- alt_exp_analysis[[3]]
-
-diff_df <- make_diff_df(topDiff, topDiff2, topDiff3)
-
-diff_hm(diff_df)
