@@ -43,7 +43,7 @@ dev.off()
 #following example -------------------------------------------
 
 analysis <- readRDS("./bambu_out_NDR_3/bambu_analysis.rds")
-plotBambu(analysis, type = "annotation", gene_id = "gene_biotype mRNA; MtrunA17_Chr1g0211071")
+plotBambu(analysis, type = "annotation", gene_id = "gene_biotype mRNA; MtrunA17_Chr1g0200031")
 cts <- assay(analysis)
 head(cts)
 
@@ -53,11 +53,6 @@ cts <- cts[,2:ncol(cts)]
 head(cts)
 
 group <- rep(c("nod" ,"irt" ,"mrt"), 3)
-dge <- DGEList(counts = cts, group = group)
-
-anno_df <- as.data.frame(anno)
-head(anno_df)
-
 dge <- DGEList(counts = cts, group = group)
 head(dge)
 
@@ -121,8 +116,10 @@ write.csv(spliceLFC, "NODvsIRT_splice_DE.csv")
 
 source("utils.R")
 
-for (i in splice$GeneID) {
-    plotSpliceReg(spliceLFC, i)
+splice_1 <- splice[splice$Alt...0n..1y..2m. == 1,]
+
+for (i in splice_1$GeneID) {
+    plotSpliceReg(spliceLFC, "NODvsIRT", i)
 }
     
 IRTvsNOD <- makeContrasts(irt-nod, levels = expDesign)
