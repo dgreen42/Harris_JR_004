@@ -52,7 +52,12 @@ rownames(cts) <- cts$TXNAME
 cts <- cts[,2:ncol(cts)]
 head(cts)
 
+#anno2 <- read.delim("./bambu_out_NDR_3/Harris_JR_RNA_004_NDR_3_extended_anntation.gtf", sep = "\t", header = F)
+#anno2 <- anno2[anno2$V3 == "transcript", ]
+
 group <- rep(c("nod" ,"irt" ,"mrt"), 3)
+
+# dge <- DGEList(counts = cts, group = group, genes = anno2)
 dge <- DGEList(counts = cts, group = group)
 head(dge)
 
@@ -120,7 +125,11 @@ splice_1 <- splice[splice$Alt...0n..1y..2m. == 1,]
 
 for (i in splice_1$GeneID) {
     plotSpliceReg(spliceLFC, "NODvsIRT", i)
+    plotIsoform(gene = strsplit(i, ";")[[1]][2], annotation = "./bambu_out_NDR_3/Harris_JR_RNA_004_NDR_3_extended_anntation.gtf")
 }
+
+plotIsoform(gene = "MtrunA17_Chr8g0390331", annotation = "./bambu_out_NDR_3/Harris_JR_RNA_004_NDR_3_extended_anntation.gtf")
+
     
 IRTvsNOD <- makeContrasts(irt-nod, levels = expDesign)
 qlfIRTvsNOD <- glmQLFTest(fit, contrast = IRTvsNOD)
