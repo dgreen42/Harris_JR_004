@@ -1,7 +1,12 @@
 
 plotSpliceReg <- function(data, set, GeneID) {
+    par(mai = c(1.02,0.82,0.82,0.42))
     isoforms <- data[data$GENEID == GeneID,]
-    barplot(isoforms$logFC, main = paste0("LFC of ", GeneID, "\n", set))
+    barplot(isoforms$logFC,
+            main = paste0("LFC of ", GeneID, "\n", set),
+            xlab = "Transcript",
+            ylab = "log fold change (LFC)"
+            )
     if (nrow(isoforms) > 3) {
         font.size <- 0.6
     } else {
@@ -12,8 +17,7 @@ plotSpliceReg <- function(data, set, GeneID) {
     }
 }
 
-plotIsoform <- function(gene, isoforms = NULL, annotation) {
-    
+plotIsoform <- function(gene, isoforms = NULL, annotation, exon_marker = F) {
     grepd <- system2("grep", args = paste(gene, annotation), stdout = T)
     rawFeatures <- strsplit(grepd, split = "\t")
     featureFrame <- data.frame(matrix(NA, ncol = length(rawFeatures[[1]]), nrow = length(rawFeatures)))
@@ -44,20 +48,22 @@ plotIsoform <- function(gene, isoforms = NULL, annotation) {
     }
     
     transcripts <- unique(featureFrame$transcriptid)
+    par(mai = c(1.02,2,0.82,0.42))
+    xlimit =  c(as.integer(min(featureFrame$start)), as.integer(max(featureFrame$end)))
     plot(NA,
-         xlim = c(as.integer(min(featureFrame$start)),
-                  as.integer(max(featureFrame$end))),
+         xlim = xlimit,
          ylim = c(0,length(transcripts)),
          main = gene,
          xlab = "Location (bp)",
          ylab = NA,
          yaxt = "n",
-         bty = "n")
+         bty = "n",
+    )
     axis(side = 2,
          at = 1:length(transcripts),
          labels = transcripts,
          las = 1,
-         cex.axis = 0.5)
+         cex.axis = 0.8)
     count <- 0
     for (i in transcripts) {
         count <- count + 1
@@ -65,11 +71,15 @@ plotIsoform <- function(gene, isoforms = NULL, annotation) {
         for(j in 1:nrow(transFrame)) {
             row <- transFrame[j,]
             if (row$feature == "transcript") {
-                lines(x = c(row$start, row$end), y = c(count,count), lwd = 1, lend = 2)
+                lines(x = c(row$start, row$end), y = c(count,count), lwd = 1, lend = 1)
             } else if (row$feature == "exon") {
-                lines(x = c(row$start, row$end), y = c(count,count), lwd = 10, lend = 2)
+                lines(x = c(row$start, row$end), y = c(count,count), lwd = 10, lend = 1)
+                if (exon_marker == T) {
+                    abline(v = row$start, lty = 2)
+                    abline(v = row$end, lty = 2)
+                }
             }
         }
     }
-    
+    return(list(xrange = xlimit, transcripts = transcripts)) 
 }

@@ -5,6 +5,7 @@ library(bambu)
 library(Repitools)
 library(ggplot2)
 library(RColorBrewer)
+library(patchwork)
 
 genome <- file.path("./MtrunA17r5.0-20161119-ANR.genome.fasta")
 annotation <- file.path("./MtrunA17r5.0-ANR-EGN-r1.9.gtf")
@@ -70,11 +71,18 @@ dge <- dge[filterLowcts, ]
 
 dge <- normLibSizes(dge)
 
+png("./plots/gene_expression_clustering.png")
+par(xpd = NA, font = 2)
 plotMDS(dge)
+title("Clustering of Gene Expression Profiles")
+dev.off()
 
 dge <- estimateDisp(dge)
 fit <- glmQLFit(dge, design = expDesign, robust = TRUE)
+png("./plots/QLDispersion.png")
 plotQLDisp(fit)
+title("Quasi-Likelihood Dispersion Estimate")
+dev.off()
 
 NODvsIRT <- makeContrasts(nod-irt, levels = expDesign)
 qlfNODvsIRT <- glmQLFTest(fit, contrast = NODvsIRT)
@@ -108,7 +116,6 @@ for (i in splice$GeneID) {
         if (lfcNODvsIRT$GENEID[j] == i) {
             count = count + 1
             spliceLFC[count,] <- lfcNODvsIRT[j,]
-            print(count)
         }
     }
 }
@@ -128,9 +135,53 @@ for (i in splice_1$GeneID) {
     plotIsoform(gene = strsplit(i, ";")[[1]][2], annotation = "./bambu_out_NDR_3/Harris_JR_RNA_004_NDR_3_extended_anntation.gtf")
 }
 
-plotIsoform(gene = "MtrunA17_Chr8g0390331", annotation = "./bambu_out_NDR_3/Harris_JR_RNA_004_NDR_3_extended_anntation.gtf")
+png("./plots/MtrunA17_Chr1g0200031_LFC_NODvsIRT.png")
+plotSpliceReg(spliceLFC, "NODvsIRT", "gene_biotype mRNA; MtrunA17_Chr1g0200031")
+dev.off()
+png("./plots/MtrunA17_Chr1g0200031_isoforms.png")
+plotIsoform(gene = "MtrunA17_Chr1g0200031", annotation = "./bambu_out_NDR_3/Harris_JR_RNA_004_NDR_3_extended_anntation.gtf", exon_marker = T)
+dev.off()
 
-    
+dev.off()
+jpeg("./plots/MtrunA17_Chr1g0200031_isoforms_LFC_NODvsIRT.jpeg", width = 800, height = 500, quality = 100)
+layout(matrix(c(1,2), nrow = 2, ncol = 1))
+iso <- plotIsoform(gene = "MtrunA17_Chr8g0340121", annotation = "./bambu_out_NDR_3/Harris_JR_RNA_004_NDR_3_extended_anntation.gtf", exon_marker = T)
+par(xpd = NA)
+text(x = min(iso$xrange), y = 2, labels = "A", adj = c(13,-5))
+plotSpliceReg(spliceLFC, "NODvsIRT", "gene_biotype mRNA; MtrunA17_Chr8g0340121")
+par(xpd = NA)
+text(x = 0, y = 6, labels = "B", adj = c(8, -5))
+
+dev.off()
+
+png("./plots/MtrunA17_Chr2g0322801_iso_reg.png",
+    height = 600,
+    width = 1000)
+layout(matrix(c(1,2), nrow = 2, ncol = 1))
+plotIsoform(gene = "MtrunA17_Chr2g0322801", annotation = "./bambu_out_NDR_3/Harris_JR_RNA_004_NDR_3_extended_anntation.gtf", exon_marker = T)
+plotSpliceReg(spliceLFC, "NODvsIRT", "gene_biotype mRNA; MtrunA17_Chr2g0322801")
+dev.off()
+
+single_cell_transcriptome <- read.csv("./Pereira_2024_single_cell_transcriptome-mmc6_CN1_toCN7.csv")
+
+count <- 0
+single_cell_xref <- c()
+for (i in single_cell_transcriptome$gene_id) {
+    for (j in splice$GeneID) {
+        spGene <- trimWhiteSpace(gsub("_", "", strsplit(j, ";")[[1]][2]))
+        if (i == spGene) {
+            single_cell_xref <- append(single_cell_xref, i)
+            count <- count + 1
+        }
+    }
+}
+
+total <- nrow(splice)
+prop <- count/total
+print(prop)
+print(single_cell_xref)
+
+
 IRTvsNOD <- makeContrasts(irt-nod, levels = expDesign)
 qlfIRTvsNOD <- glmQLFTest(fit, contrast = IRTvsNOD)
 lfcIRTvsNOD <- data.frame(qlfIRTvsNOD$genes, qlfIRTvsNOD$table)
