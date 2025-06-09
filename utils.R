@@ -83,3 +83,20 @@ plotIsoform <- function(gene, isoforms = NULL, annotation, exon_marker = F) {
     }
     return(list(xrange = xlimit, transcripts = transcripts)) 
 }
+
+plotVen <- function(left, center, right, title, labl = NULL, labc = NULL, labr = NULL) {
+    par(xpd = NA)
+    plot(NA, xlim = c(0,100), ylim = c(0,100),
+         xlab = NA, ylab = NA,
+         xaxt = "n", yaxt = "n",
+         bty = "n")
+    points(35, 40, cex = 40, col = rgb(1,0,0,0.5), pch = 16)
+    points(65, 40, cex = 40, col = rgb(0,0,1,0.5), pch = 16)
+    text(20, 40, paste(left))
+    text(50, 40, paste(center))
+    text(80, 40, paste(right))
+    title(paste(title))
+    text(20, -30, paste(labl))
+    text(50, -30, paste(labc))
+    text(80, -30, paste(labr))
+}

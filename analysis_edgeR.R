@@ -182,6 +182,200 @@ print(prop)
 print(single_cell_xref)
 
 
+count2 <- 0
+single_cell_xref_var <- c()
+for (i in single_cell_transcriptome$gene_id) {
+    for (j in rownames(sig_var$table)) {
+        spGene <- trimWhiteSpace(gsub("_", "", strsplit(j, ";")[[1]][2]))
+        if (i == spGene) {
+            single_cell_xref_var <- append(single_cell_xref_var, i)
+            count2 <- count2 + 1
+        }
+    }
+}
+
+total <- nrow(sig_var$table)
+prop2 <- count2/total
+print(prop2)
+print(single_cell_xref_var)
+
+# cross reference of single cell transcriptome clusters in root and nodule
+
+clusters <- list.files("./single_cell_clusters/")
+for(i in clusters) {
+    name <- paste(i)
+    print(name)
+    data <- read.csv(paste("./single_cell_clusters/", i, sep = ""))
+    assign(name, data)
+}
+
+sct_c1.csv$tissue <- "cortex"
+sct_c2.csv$tissue <- "epidermis"
+sct_c3.csv$tissue <- "cortex"
+sct_c4.csv$tissue <- "epidermis_cortex"
+sct_c5.csv$tissue <- "steele"
+sct_c7.csv$tissue <- "pericycle"
+sct_c8.csv$tissue <- "endodermis"
+sct_c10.csv$tissue <- "suberized endodermis"
+sct_c11.csv$tissue <- "roothair"
+sct_c13.csv$tissue <- "steele"
+sct_c14.csv$tissue <- "steele"
+sct_c17.csv$tissue <- "steele"
+sct_c18.csv$tissue <- "steele"
+sct_c19.csv$tissue <- "steele"
+
+root_clusters <- rbind(sct_c1.csv,
+                       sct_c2.csv,
+                       sct_c3.csv,
+                       sct_c4.csv,
+                       sct_c5.csv,
+                       sct_c7.csv,
+                       sct_c8.csv,
+                       sct_c10.csv,
+                       sct_c11.csv,
+                       sct_c13.csv,
+                       sct_c14.csv,
+                       sct_c17.csv,
+                       sct_c18.csv,
+                       sct_c19.csv
+)
+
+sct_c6.csv$tissue <- "nod_meristem"
+sct_c9.csv$tissue <- "nod_metistem_primo"
+sct_c15.csv$tissue <- "nod_infected_cells"
+sct_c16.csv$tissue <- "nod"
+    
+nodule_clusters <- rbind(sct_c6.csv,
+                         sct_c9.csv,
+                         sct_c15.csv,
+                         sct_c16.csv
+)
+
+all_cluster <- rbind(root_clusters, nodule_clusters)
+splice$tissue <- rep(NA, nrow(splice))
+
+for (i in 1:nrow(splice)) {
+    spGene <- trimWhiteSpace(gsub("_", "", strsplit(splice$GeneID[i], ";")[[1]][2]))
+    print(spGene)
+    for (j in 1:nrow(all_cluster)) {
+        # print(all_cluster$gene_id[j])
+        if (spGene == all_cluster$gene_id[j]) {
+            splice$tissue[i] <- all_cluster$tissue[j]
+        }
+    }
+}
+
+count <- 0
+for (i in splice$GeneID) {
+    spGene <- trimWhiteSpace(gsub("_", "", strsplit(i, ";")[[1]][2]))
+    for (j in all_cluster$gene_id) {
+        if (spGene == j) {
+            count <- count + 1
+        }
+    }
+}
+
+splice$nodule_cluster <- rep(0, nrow(splice))
+splice$root_cluster <- rep(0, nrow(splice))
+
+count <- 0
+for (i in splice$GeneID) {
+    spGene <- trimWhiteSpace(gsub("_", "", strsplit(i, ";")[[1]][2]))
+    count <- count + 1
+    for(j in root_clusters$gene_id) {
+        if (spGene == j) {
+            splice$root_cluster[count] <- 1
+        }
+    }
+}
+
+count <- 0
+for (i in splice$GeneID) {
+    spGene <- trimWhiteSpace(gsub("_", "", strsplit(i, ";")[[1]][2]))
+    count <- count + 1
+    for(j in nodule_clusters$gene_id) {
+        if (spGene == j) {
+            splice$nodule_cluster[count] <- 1
+        }
+    }
+}
+
+splice$both_clutsers <- splice$root_cluster + splice$nodule_cluster
+
+count_both <- 0
+for(i in splice$both_clutsers) {
+    if (i == 2) {
+        count_both <- count_both + 1
+    }
+}
+
+plotVen(sum(splice$root_cluster), count_both, sum(splice$nodule_cluster),
+        title = "Spliced Transcripts in Roots and Nodules",
+        labl = "Root",
+        labc = "Both",
+        labr = "Nodule")
+
+
+
+
+sig_var$table$nodule_cluster <- rep(0, nrow(sig_var$table))
+sig_var$table$root_cluster <- rep(0, nrow(sig_var$table))
+
+count <- 0
+for (i in rownames(sig_var$table)) {
+    spGene <- trimWhiteSpace(gsub("_", "", strsplit(i, ";")[[1]][2]))
+    count <- count + 1
+    for(j in root_clusters$gene_id) {
+        if (spGene == j) {
+            sig_var$table$root_cluster[count] <- 1
+        }
+    }
+}
+
+count <- 0
+for (i in rownames(sig_var$table)) {
+    spGene <- trimWhiteSpace(gsub("_", "", strsplit(i, ";")[[1]][2]))
+    count <- count + 1
+    for(j in nodule_clusters$gene_id) {
+        if (spGene == j) {
+            sig_var$table$nodule_cluster[count] <- 1
+        }
+    }
+}
+
+sig_var$table$both_clutsers <- sig_var$table$root_cluster + sig_var$table$nodule_cluster
+
+count_both <- 0
+for(i in sig_var$table$both_clutsers) {
+    if (i == 2) {
+        count_both <- count_both + 1
+    }
+}
+
+plotVen(sum(sig_var$table$root_cluster), count_both, sum(sig_var$table$nodule_cluster),
+        title = "Spliced Transcripts in Roots and Nodules",
+        labl = "Root",
+        labc = "Both",
+        labr = "Nodule")
+
+#
+
+
+
+
+
+
+
+
+
+
+
+
+for (i in single_cell_xref_var) {
+    plotSpliceReg(spliceLFC, "NODvsIRT", i)
+    plotIsoform(gene = strsplit(i, ";")[[1]][2], annotation = "./bambu_out_NDR_3/Harris_JR_RNA_004_NDR_3_extended_anntation.gtf")
+}
+
 IRTvsNOD <- makeContrasts(irt-nod, levels = expDesign)
 qlfIRTvsNOD <- glmQLFTest(fit, contrast = IRTvsNOD)
 lfcIRTvsNOD <- data.frame(qlfIRTvsNOD$genes, qlfIRTvsNOD$table)
