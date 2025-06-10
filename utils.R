@@ -100,3 +100,42 @@ plotVen <- function(left, center, right, title, labl = NULL, labc = NULL, labr =
     text(50, -30, paste(labc))
     text(80, -30, paste(labr))
 }
+
+regTx <- function(DEX) {
+    upReg <- sum(DEX == 1)
+    downReg <- sum(DEX == -1)
+    noSig <- sum(DEX == 0)
+    
+    upRegTx <- c()
+    downRegTx <- c()
+    noSigTx <- c()
+    for (i in 1:nrow(DEX)) {
+        if (DEX[[i]] == 1) {
+            upRegTx[i] <- rownames(DEX)[i]
+        } else if (DEX[[i]] == -1) {
+            downRegTx[i] <- rownames(DEX)[i]
+        } else if (DEX[[i]] == 0) {
+            noSigTx[i] <- rownames(DEX)[i]
+        }
+    }
+    
+    list(
+        upReg = ramna(upRegTx),
+        downReg = ramna(downRegTx),
+        noSig = ramna(noSigTx)
+    )
+} 
+
+ramna <- function(x) {
+    y <- NULL
+    count <- 1
+    for (i in x) {
+        if (is.na(i)) {
+            next
+        } else {
+            y[count] <- i
+            count <- count + 1
+        }
+    }
+    return(y)
+}

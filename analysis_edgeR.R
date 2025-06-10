@@ -7,6 +7,7 @@ library(ggplot2)
 library(RColorBrewer)
 library(patchwork)
 
+#Bambu Stuff ----
 genome <- file.path("./MtrunA17r5.0-20161119-ANR.genome.fasta")
 annotation <- file.path("./MtrunA17r5.0-ANR-EGN-r1.9.gtf")
 prepAnno <- prepareAnnotations(annotation)
@@ -41,6 +42,7 @@ png(filename = "./plots/MtrunA17_Chr8g0390331_isoform_count.png")
 plotBambu(analysis, type = "annotation", gene_id = "gene_biotype mRNA; MtrunA17_Chr8g0390331")
 dev.off()
 
+# analysis ----
 #following example -------------------------------------------
 
 analysis <- readRDS("./bambu_out_NDR_3/bambu_analysis.rds")
@@ -48,84 +50,7 @@ plotBambu(analysis, type = "annotation", gene_id = "gene_biotype mRNA; MtrunA17_
 cts <- assay(analysis)
 head(cts)
 
-cts <- read.delim("./bambu_out_NDR_3/Harris_JR_RNA_004_NDR_3counts_transcript.tsv")
-rownames(cts) <- cts$TXNAME
-cts <- cts[,2:ncol(cts)]
-head(cts)
-
-#anno2 <- read.delim("./bambu_out_NDR_3/Harris_JR_RNA_004_NDR_3_extended_anntation.gtf", sep = "\t", header = F)
-#anno2 <- anno2[anno2$V3 == "transcript", ]
-
-group <- rep(c("nod" ,"irt" ,"mrt"), 3)
-
-# dge <- DGEList(counts = cts, group = group, genes = anno2)
-dge <- DGEList(counts = cts, group = group)
-head(dge)
-
-expDesign <- model.matrix(~0+group, data = dge$samples)
-colnames(expDesign) <- levels(dge$samples$group)
-expDesign
-
-filterLowcts <- filterByExpr(dge, design = expDesign)
-dge <- dge[filterLowcts, ]
-
-dge <- normLibSizes(dge)
-
-png("./plots/gene_expression_clustering.png")
-par(xpd = NA, font = 2)
-plotMDS(dge)
-title("Clustering of Gene Expression Profiles")
-dev.off()
-
-dge <- estimateDisp(dge)
-fit <- glmQLFit(dge, design = expDesign, robust = TRUE)
-png("./plots/QLDispersion.png")
-plotQLDisp(fit)
-title("Quasi-Likelihood Dispersion Estimate")
-dev.off()
-
-NODvsIRT <- makeContrasts(nod-irt, levels = expDesign)
-qlfNODvsIRT <- glmQLFTest(fit, contrast = NODvsIRT)
-lfcNODvsIRT <- data.frame(qlfNODvsIRT$genes, qlfNODvsIRT$table)
-write.csv(lfcNODvsIRT, "NODvsIRTlfc.csv")
-topTags(qlfNODvsIRT)
-dexp1 <- decideTests(qlfNODvsIRT, p.value = 0.05)
-summary(dexp1)
-alt_splice_1 <- diffSpliceDGE(fit, contrast = NODvsIRT, geneid = "GENEID")
-top_splice <- topSpliceDGE(alt_splice_1)
-top_splice
-variants <- spliceVariants(dge, dge$genes, dge$common.dispersion)
-plot(variants$table$PValue, variants$table$logCPM)
-sig_var <- variants[variants$table$PValue < 0.01,]
-sig_var2 <- variants[variants$table$PValue < 0.0000001,]
-sig_var2
-
-write.csv(top_splice, "./NODvsIRT_topSplice.csv")
-write.csv(sig_var, "./NODvsIRT_variants1.csv")
-write.csv(sig_var2, "./NODvsIRT_variants2.csv")
-
-splice <- read.csv("NODvsIRT_splice.csv")
-lfcNODvsIRT$BambuTx <- rownames(lfcNODvsIRT)
-rownames(lfcNODvsIRT) <- 1:nrow(lfcNODvsIRT)
-
-count <- 0
-spliceLFC <- data.frame(matrix(ncol = ncol(lfcNODvsIRT)))
-colnames(spliceLFC) <- colnames(lfcNODvsIRT)
-for (i in splice$GeneID) {
-    for (j in 1:nrow(lfcNODvsIRT)) {
-        if (lfcNODvsIRT$GENEID[j] == i) {
-            count = count + 1
-            spliceLFC[count,] <- lfcNODvsIRT[j,]
-        }
-    }
-}
-
-spliceLFC
-rownames(spliceLFC) <- spliceLFC$BambuTx
-spliceLFC <- spliceLFC[,1:ncol(spliceLFC)-1]
-
-write.csv(spliceLFC, "NODvsIRT_splice_DE.csv")
-
+# Plotting ----
 source("utils.R")
 
 splice_1 <- splice[splice$Alt...0n..1y..2m. == 1,]
@@ -161,6 +86,8 @@ layout(matrix(c(1,2), nrow = 2, ncol = 1))
 plotIsoform(gene = "MtrunA17_Chr2g0322801", annotation = "./bambu_out_NDR_3/Harris_JR_RNA_004_NDR_3_extended_anntation.gtf", exon_marker = T)
 plotSpliceReg(spliceLFC, "NODvsIRT", "gene_biotype mRNA; MtrunA17_Chr2g0322801")
 dev.off()
+
+# Sinlge Cell Xref ----
 
 single_cell_transcriptome <- read.csv("./Pereira_2024_single_cell_transcriptome-mmc6_CN1_toCN7.csv")
 
@@ -375,22 +302,6 @@ for (i in single_cell_xref_var) {
     plotSpliceReg(spliceLFC, "NODvsIRT", i)
     plotIsoform(gene = strsplit(i, ";")[[1]][2], annotation = "./bambu_out_NDR_3/Harris_JR_RNA_004_NDR_3_extended_anntation.gtf")
 }
-
-IRTvsNOD <- makeContrasts(irt-nod, levels = expDesign)
-qlfIRTvsNOD <- glmQLFTest(fit, contrast = IRTvsNOD)
-lfcIRTvsNOD <- data.frame(qlfIRTvsNOD$genes, qlfIRTvsNOD$table)
-write.csv(lfcIRTvsNOD, "IRTvsNODlfc.csv")
-topTags(qlfIRTvsNOD)
-dexp1 <- decideTests(qlfIRTvsNOD, p.value = 0.05)
-summary(dexp1)
-
-
-
-IRTvsMRT <- makeContrasts(mrt-irt, levels = expDesign)
-qlfIRTvsMRT <- glmQLFTest(fit, contrast = IRTvsMRT)
-alt_splice_2 <- diffSpliceDGE(fit, contrast = IRTvsMRT, geneid = "GENEID")
-topSpliceDGE(alt_splice_2)
-
 qlfIRTvsNOD$table$padj <- p.adjust(qlfIRTvsNOD$table$PValue, method = "BH")
 tol10b.enriched <- qlfIRTvsNOD$table$logFC > 0 & qlfIRTvsNOD$table$padj < 0.01
 tol10b.depleted <- qlfIRTvsNOD$table$logFC < 0 & qlfIRTvsNOD$table$padj < 0.01
