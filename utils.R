@@ -139,3 +139,42 @@ ramna <- function(x) {
     }
     return(y)
 }
+
+compareReg <- function(set1, set2) {
+    count <- 1
+    reg <- list(
+        up = c(),
+        down = c(),
+        summary = c()
+    )
+    for (i in set1$upReg) {
+        for(j in set2$upReg) {
+            if (i == j) {
+                reg$up[count] <- i
+                count <- count + 1
+            }
+        }
+    }
+    reg$summary[1] <- count
+    
+    for (i in set1$downReg) {
+        for(j in set2$downReg) {
+            if (i == j) {
+                reg$down[count] <- i
+                count <- count + 1
+            }
+        }
+    }
+    reg$summary[2] <- count
+    
+    for (i in set1$noSig) {
+        for(j in set2$noSig) {
+            if (i == j) {
+                count <- count + 1
+            }
+        }
+    }
+    reg$summary[3] <- count
+    
+    return(reg)
+}

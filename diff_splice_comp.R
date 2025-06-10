@@ -198,13 +198,18 @@ head(imReg)
 
 ## Comp ----
 
-count <- 1
-niimUP <- c()
-for (i in niReg$upReg) {
-    for(j in imReg$upReg) {
-        if (i == j) {
-            niimUP[count] <- i
-            count <- count + 1
-        }
-    }
+niimCompReg <- compareReg(niReg, imReg)
+ninmCompReg <- compareReg(niReg, nmReg)
+nmimCompReg <- compareReg(nmReg, imReg)
+
+plotVen(length(niReg$upReg) - length(niimCompReg$up), length(niimCompReg$up), length(imReg$upReg) - length(niimCompReg$up),
+        "Upregulated Genes Shared by NODvsIRT and IRTvsMRT",
+        labl = "NODvsIRT",
+        labc = "Both",
+        labr = "IRTvsMRT"
+)
+
+for (i in niimCompReg$up) {
+    plotSpliceReg(niLFC, "IRTvsMRT", paste("gene_biotype mRNA;", i))
+    plotIsoform(gene = i, annotation = "./bambu_out_NDR_3/Harris_JR_RNA_004_NDR_3_extended_anntation.gtf")
 }
