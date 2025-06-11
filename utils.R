@@ -102,9 +102,9 @@ plotVen <- function(left, center, right, title, labl = NULL, labc = NULL, labr =
 }
 
 regTx <- function(DEX) {
-    upReg <- sum(DEX == 1)
-    downReg <- sum(DEX == -1)
-    noSig <- sum(DEX == 0)
+    # upReg <- sum(DEX == 1)
+    # downReg <- sum(DEX == -1)
+    # noSig <- sum(DEX == 0)
     
     upRegTx <- c()
     downRegTx <- c()
@@ -141,40 +141,48 @@ ramna <- function(x) {
 }
 
 compareReg <- function(set1, set2) {
-    count <- 1
+    summary <- list(
+        upReg = NA,
+        downReg = NA,
+        noSig = NA
+    )
+    countup <- 1
+    countdown <- 1
+    countnosig <- 1
     reg <- list(
         up = c(),
         down = c(),
-        summary = c()
+        summary = list()
     )
     for (i in set1$upReg) {
         for(j in set2$upReg) {
             if (i == j) {
-                reg$up[count] <- i
-                count <- count + 1
+                reg$up[countup] <- i
+                countup <- countup + 1
             }
         }
     }
-    reg$summary[1] <- count
+    summary$upReg <- countup
     
     for (i in set1$downReg) {
         for(j in set2$downReg) {
             if (i == j) {
-                reg$down[count] <- i
-                count <- count + 1
+                reg$down[countdown] <- i
+                countdown <- countdown + 1
             }
         }
     }
-    reg$summary[2] <- count
+    summary$downReg <- countdown
     
     for (i in set1$noSig) {
         for(j in set2$noSig) {
             if (i == j) {
-                count <- count + 1
+                countnosig <- countnosig + 1
             }
         }
     }
-    reg$summary[3] <- count
+    summary$noSig <- countnosig
+    reg$summary <- summary
     
     return(reg)
 }
