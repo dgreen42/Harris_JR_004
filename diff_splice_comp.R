@@ -222,6 +222,18 @@ plotVen(length(niReg$upReg) - length(niimCompReg$up), length(niimCompReg$up), le
         labr = "IRTvsMRT"
 )
 
+niRegR <- c()
+count <- 1
+for (i in imReg$upReg) {
+    test <- sum(niimCompReg$up == i)
+    if (test == 1) {
+        next
+    } else {
+        niRegR[count] <- i
+        count <- count + 1
+    }
+}
+
 plotVen(length(niReg$downReg) - length(niimCompReg$down), length(niimCompReg$down), length(imReg$downReg) - length(niimCompReg$down),
         "Downregulated Genes Shared by NODvsIRT and IRTvsMRT",
         labl = "NODvsIRT",
@@ -254,6 +266,8 @@ for (i in ninmCompReg$up) {
     plotSpliceReg(niLFC, "IRTvsMRT", paste("gene_biotype mRNA;", i))
     plotIsoform(gene = i, annotation = "./bambu_out_NDR_3/Harris_JR_RNA_004_NDR_3_extended_anntation.gtf")
 }
+
+plotIsoform(gene = "MtrunA17_Chr8g0344721", annotation = "./bambu_out_NDR_3/Harris_JR_RNA_004_NDR_3_extended_anntation.gtf")
 
 ## NODvsMRT X IRTvsMRT ----
 
