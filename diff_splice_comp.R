@@ -1,6 +1,11 @@
 source("utils.R")
 
 # Import Data ----
+
+cts <- read.delim("./bambu_out_NDR_3/Harris_JR_RNA_004_NDR_3counts_transcript.tsv")
+geneLookup <- data.frame(TXNAME = cts$TXNAME, GENEID = cts$GENEID)
+rm(cts)
+
 niLFC <- read.csv("./NODvsIRT/NODvsIRTlfc.csv")
 niVar7 <- read.csv("./NODvsIRT/NODvsIRT_variants2.csv")
 niSplice <- read.csv("./NODvsIRT/NODvsIRT_splice.csv")
@@ -92,6 +97,39 @@ head(nmSpliceDE)
 write.csv(niSpliceDE, "./NODvsMRT/NODvsMRT_splice_DE.csv")
 
 ## IRTvsMRT ----
+# Isoform Props ----
+
+library(foreach)
+library(doParallel)
+
+isoProps <- isoformProp2(cts)
+write.csv(isoProps, "./isoform_proportions.csv")
+
+isoProp10 <- isoProps[isoProps$prop > 0.10,]
+isoProp05 <- isoProps[isoProps$prop > 0.05,]
+
+NOD <- list(
+    subset = "NOD",
+    df = data.frame(TXNAME = cts$TXNAME, GENEID = cts$GENEID, CINOD = cts$CINOD_aln, DINOD = cts$DINOD_aln, EINOD = cts$EINOD_aln)
+)
+write.csv(NOD$df, "./subsets/NOD.csv", row.names = F)
+IRT <- list(
+    subset = "IRT",
+    df = data.frame(TXNAME = cts$TXNAME, GENEID = cts$GENEID, CIRTJ = cts$CIRTJ_aln, DIRTJ = cts$DIRTJ_aln, EIRTJ = cts$EIRTJ_aln)
+)
+write.csv(IRT$df, "./subsets/IRT.csv", row.names = F)
+MRT <- list(
+    subset = "MRT",
+    df = data.frame(TXNAME = cts$TXNAME, GENEID = cts$GENEID, CMRTJ = cts$CMRTJ_aln, DMRTJ = cts$DMRTJ_aln, EMRTJ = cts$EMRTJ_aln)
+)
+write.csv(MRT$df, "./subsets/MRT.csv", row.names = F)
+
+allsets <- list(
+    NOD = NOD, 
+    IRT = IRT,
+    MRT = MRT)
+
+
 
 colnames(imLFC) <- c("BambuTx", colnames(imLFC[,2:ncol(imLFC)]))
 
@@ -116,17 +154,23 @@ write.csv(imSpliceDE, "./IRTvsMRT/IRTvsMRT_splice_DE.csv")
 
 # Plotting ----
 
-rownames(niLFC) <- niLFC$BambuTx
+rownames(niLFC) <- niLFC[,1]
 
 ## NODvsIRT ----
-for (i in niSplice$GeneID) {
-    plotSpliceReg(niLFC, "NODvsIRT", i)
-    plotIsoform(gene = strsplit(i, ";")[[1]][2], annotation = "./bambu_out_NDR_3/Harris_JR_RNA_004_NDR_3_extended_anntation.gtf")
-}
 
 layout(matrix(c(1,2), nrow = 2, ncol = 1))
-plotIsoform(gene = "MtrunA17_Chr2g0322801", annotation = "./bambu_out_NDR_3/Harris_JR_RNA_004_NDR_3_extended_anntation.gtf", exon_marker = T)
-plotSpliceReg(niLFC, "NODvsIRT", "gene_biotype mRNA; MtrunA17_Chr2g0322801")
+for (i in niSplice$GeneID) {
+    plotIsoform(gene = strsplit(i, ";")[[1]][2], annotation = "./bambu_out_NDR_3/Harris_JR_RNA_004_NDR_3_extended_anntation.gtf", exon_marker = F, prop = isoProps)
+    plotSpliceReg(niLFC, "NODvsIRT", i)
+}
+
+dev.off()
+layout(matrix(c(1,2), nrow = 2, ncol = 1))
+plotIsoform(gene = "MtrunA17_Chr8g0344721", annotation = "./bambu_out_NDR_3/Harris_JR_RNA_004_NDR_3_extended_anntation.gtf", exon_marker = F, prop = isoProps)
+plotSpliceReg(niLFC, "NODvsIRT", "gene_biotype mRNA; MtrunA17_Chr8g0344721")
+
+dev.off()
+plotIsoform(gene = "MtrunA17_Chr8g0344721", annotation = "./bambu_out_NDR_3/Harris_JR_RNA_004_NDR_3_extended_anntation.gtf", exon_marker = T, prop = isoProps)
 
 ## NODvsMRT ----
 
@@ -215,31 +259,80 @@ saveRDS(masterReg, "./masterReg.rds")
 
 ## NODvsIRT X IRTvsMRT ----
 
+png("./comp/NODvsIRTxIRTvsMRTup.png")
 plotVen(length(niReg$upReg) - length(niimCompReg$up), length(niimCompReg$up), length(imReg$upReg) - length(niimCompReg$up),
         "Upregulated Genes Shared by NODvsIRT and IRTvsMRT",
         labl = "NODvsIRT",
         labc = "Both",
         labr = "IRTvsMRT"
 )
+dev.off()
 
-niRegR <- c()
+niimRegUnique <- list(
+    niRegUpUnique = data.frame(TXNAME = NA, GENEID = NA),
+    imRegUpUnique = data.frame(TXNAME = NA, GENEID = NA),
+    niimRegUpUnique = data.frame(TXNAME = NA, GENEID = NA),
+    niRegDownUnique = data.frame(TXNAME = NA, GENEID = NA),
+    imRegDownUnique = data.frame(TXNAME = NA, GENEID = NA),
+    niimRegDownUnique = data.frame(TXNAME = NA, GENEID = NA)
+    )
+
+niimRegUpUnique <- list(
+    niRegUpUnique = data.frame(TXNAME = NA, GENEID = NA),
+    imRegUpUnique = data.frame(TXNAME = NA, GENEID = NA),
+    niimRegUpUnique = data.frame(TXNAME = NA, GENEID = NA)
+)
+
+testTable <- regUnique(imReg$upReg, niReg$upReg, niimCompReg$up, niimRegUpUnique, geneLookup, 
+                       setNames = c("imRegUp", "niRegUp", "niimCompReg")
+)
+
+imRegUpUnique <- c()
 count <- 1
 for (i in imReg$upReg) {
     test <- sum(niimCompReg$up == i)
     if (test == 1) {
         next
     } else {
-        niRegR[count] <- i
+        imRegUpUnique[count] <- i
         count <- count + 1
     }
 }
 
+count <- 1
+for(i in imRegUpUnique) {
+    for(j in 1:nrow(geneLookup)) {
+        if (i == geneLookup$TXNAME[j]) {
+            niimRegUnique$imRegUpUnique[count,] <- geneLookup[j,]
+            count <- count + 1
+        } else {
+            next
+        }
+    }
+}
+
+niRegUpUnique <- c()
+count <- 1
+for (i in niReg$upReg) {
+    test <- sum(niimCompReg$up == i)
+    if (test == 1) {
+        next
+    } else {
+        niRegUpUnique[count] <- i
+        count <- count + 1
+    }
+}
+
+
+
+png("./comp/NODvsIRTxIRTvsMRTdown.png")
 plotVen(length(niReg$downReg) - length(niimCompReg$down), length(niimCompReg$down), length(imReg$downReg) - length(niimCompReg$down),
         "Downregulated Genes Shared by NODvsIRT and IRTvsMRT",
         labl = "NODvsIRT",
         labc = "Both",
         labr = "IRTvsMRT"
 )
+dev.off()
 
 for (i in niimCompReg$up) {
     plotSpliceReg(niLFC, "IRTvsMRT", paste("gene_biotype mRNA;", i))
@@ -248,19 +341,23 @@ for (i in niimCompReg$up) {
 
 ## NODvsIRT X NODvsMRT ----
 
+png("./comp/NODvsIRTxNODvsMRTup.png")
 plotVen(length(niReg$upReg) - length(ninmCompReg$up), length(ninmCompReg$up), length(nmReg$upReg) - length(ninmCompReg$up),
         "Upregulated Genes Shared by NODvsIRT and NODvsMRT",
         labl = "NODvsIRT",
         labc = "Both",
         labr = "NODvsMRT"
 )
+dev.off()
 
+png("./comp/NODvsIRTxNODvsMRTdown.png")
 plotVen(length(niReg$downReg) - length(ninmCompReg$down), length(ninmCompReg$down), length(nmReg$downReg) - length(ninmCompReg$down),
         "Downregulated Genes Shared by NODvsIRT and NODvsMRT",
         labl = "NODvsIRT",
         labc = "Both",
         labr = "NODvsMRT"
 )
+dev.off()
 
 for (i in ninmCompReg$up) {
     plotSpliceReg(niLFC, "IRTvsMRT", paste("gene_biotype mRNA;", i))
@@ -271,21 +368,26 @@ plotIsoform(gene = "MtrunA17_Chr8g0344721", annotation = "./bambu_out_NDR_3/Harr
 
 ## NODvsMRT X IRTvsMRT ----
 
+png("./comp/NODvsMRTxIRTvsMRTup.png")
 plotVen(length(nmReg$upReg) - length(nmimCompReg$up), length(nmimCompReg$up), length(imReg$upReg) - length(nmimCompReg$up),
         "Upregulated Genes Shared by NODvsMRT and IRTvsMRT",
         labl = "NODvsMRT",
         labc = "Both",
         labr = "IRTvsMRT"
 )
+dev.off()
 
+png("./comp/NODvsMRTxIRTvsMRTdown.png")
 plotVen(length(nmReg$downReg) - length(nmimCompReg$down), length(nmimCompReg$down), length(imReg$downReg) - length(nmimCompReg$down),
         "Downregulated Genes Shared by NODvsMRT and IRTvsMRT",
         labl = "NODvsMRT",
         labc = "Both",
         labr = "IRTvsMRT"
 )
+dev.off()
 
 for (i in ninmCompReg$up) {
     plotSpliceReg(niLFC, "IRTvsMRT", paste("gene_biotype mRNA;", i))
     plotIsoform(gene = i, annotation = "./bambu_out_NDR_3/Harris_JR_RNA_004_NDR_3_extended_anntation.gtf")
 }
+

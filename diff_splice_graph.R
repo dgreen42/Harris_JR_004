@@ -119,6 +119,7 @@ vertex_attr(g) <- list(
 lab.sizes <- c(rep(1, 10), rep(0.7, nrow(vert) - 6))
 deg.add <- c(rep(10, length(genes)), rep(6, nrow(vert) - length(genes)))
 
+par(xpd = T)
 plot(g,
      layout = lay,
      edge.width = 1.5,
@@ -131,3 +132,24 @@ plot(g,
      asp = -5
      )
 
+legend("bottomleft",
+       title = "Edges",
+       legend = c("Induced/Activates", "Respresses/Inhibits"),
+       col = c("#068033", "#192bcf"),
+       lty = 1,
+       lwd = 2,
+       cex = 0.7,
+       inset = c(0.2,-0.1),
+       box.lwd = 0
+)
+
+legend("bottomleft",
+       title = "Nodes",
+       legend = c("Nod Genes", "Spliced Genes"),
+       col = c("red", "#4287f5"),
+       pch = 16,
+       pt.cex = 1.5,
+       cex = 0.7,
+       inset = c(0,-0.1),
+       box.lwd = 0
+)

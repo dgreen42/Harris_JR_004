@@ -1,3 +1,4 @@
+# These are utility functions
 
 plotSpliceReg <- function(data, set, GeneID) {
     par(mai = c(1.02,0.82,0.82,0.42))
@@ -7,6 +8,7 @@ plotSpliceReg <- function(data, set, GeneID) {
             xlab = "Transcript",
             ylab = "log fold change (LFC)"
             )
+    abline(h = 0, col = "red", lwd = 3)
     if (nrow(isoforms) > 3) {
         font.size <- 0.6
     } else {
@@ -17,7 +19,7 @@ plotSpliceReg <- function(data, set, GeneID) {
     }
 }
 
-plotIsoform <- function(gene, isoforms = NULL, annotation, exon_marker = F) {
+plotIsoform <- function(gene, isoforms = NULL, annotation, exon_marker = F, prop = NULL) {
     grepd <- system2("grep", args = paste(gene, annotation), stdout = T)
     rawFeatures <- strsplit(grepd, split = "\t")
     featureFrame <- data.frame(matrix(NA, ncol = length(rawFeatures[[1]]), nrow = length(rawFeatures)))
@@ -47,41 +49,136 @@ plotIsoform <- function(gene, isoforms = NULL, annotation, exon_marker = F) {
         }
     }
     
-    transcripts <- unique(featureFrame$transcriptid)
-    par(mai = c(1.02,2,0.82,0.42))
-    xlimit =  c(as.integer(min(featureFrame$start)), as.integer(max(featureFrame$end)))
-    plot(NA,
-         xlim = xlimit,
-         ylim = c(0,length(transcripts)),
-         main = gene,
-         xlab = "Location (bp)",
-         ylab = NA,
-         yaxt = "n",
-         bty = "n",
-    )
-    axis(side = 2,
-         at = 1:length(transcripts),
-         labels = transcripts,
-         las = 1,
-         cex.axis = 0.8)
-    count <- 0
-    for (i in transcripts) {
-        count <- count + 1
-        transFrame <- featureFrame[featureFrame$transcriptid == i, ]
-        for(j in 1:nrow(transFrame)) {
-            row <- transFrame[j,]
-            if (row$feature == "transcript") {
-                lines(x = c(row$start, row$end), y = c(count,count), lwd = 1, lend = 1)
-            } else if (row$feature == "exon") {
-                lines(x = c(row$start, row$end), y = c(count,count), lwd = 10, lend = 1)
-                if (exon_marker == T) {
-                    abline(v = row$start, lty = 2)
-                    abline(v = row$end, lty = 2)
+    if (is.null(prop)) {
+        transcripts <- unique(featureFrame$transcriptid)
+        par(mai = c(1.02,2,1,0.42))
+        xlimit =  c(as.integer(min(featureFrame$start)), as.integer(max(featureFrame$end)))
+        plot(NA,
+             xlim = xlimit,
+             ylim = c(0,length(transcripts)),
+             main = gene,
+             xlab = "Location (bp)",
+             ylab = NA,
+             yaxt = "n",
+             bty = "n",
+        )
+        axis(side = 2,
+             at = 1:length(transcripts),
+             labels = transcripts,
+             las = 1,
+             cex.axis = 0.8)
+        count <- 0
+        for (i in transcripts) {
+            count <- count + 1
+            transFrame <- featureFrame[featureFrame$transcriptid == i, ]
+            for(j in 1:nrow(transFrame)) {
+                row <- transFrame[j,]
+                if (row$feature == "transcript") {
+                    lines(x = c(row$start, row$end), y = c(count,count), lwd = 1, lend = 1)
+                } else if (row$feature == "exon") {
+                    lines(x = c(row$start, row$end), y = c(count,count), lwd = 10, lend = 1)
+                    if (exon_marker == T) {
+                        abline(v = row$start, lty = 2)
+                        abline(v = row$end, lty = 2)
+                    }
                 }
             }
         }
+        mtext("Isoform",
+              side = 3,
+              padj = -1.2, 
+              adj = -0.3,
+              
+        )
+        return(list(xrange = xlimit, transcripts = transcripts)) 
+        
+    } else {
+        transcripts <- unique(featureFrame$transcriptid)
+        par(mai = c(1.02,2,1,1))
+        xlimit =  c(as.integer(min(featureFrame$start)), as.integer(max(featureFrame$end)))
+        plot(NA,
+             xlim = xlimit,
+             ylim = c(0,length(transcripts)),
+             main = gene,
+             xlab = "Location (bp)",
+             ylab = NA,
+             yaxt = "n",
+             bty = "n",
+        )
+        axis(side = 2,
+             at = 1:length(transcripts),
+             labels = transcripts,
+             las = 1,
+             cex.axis = 0.8)
+        count <- 0
+        for (i in transcripts) {
+            count <- count + 1
+            transFrame <- featureFrame[featureFrame$transcriptid == i, ]
+            for(j in 1:nrow(transFrame)) {
+                row <- transFrame[j,]
+                if (row$feature == "transcript") {
+                    lines(x = c(row$start, row$end), y = c(count,count), lwd = 1, lend = 1)
+                } else if (row$feature == "exon") {
+                    lines(x = c(row$start, row$end), y = c(count,count), lwd = 10, lend = 1)
+                    if (exon_marker == T) {
+                        abline(v = row$start, lty = 2)
+                        abline(v = row$end, lty = 2)
+                    }
+                }
+            }
+        }
+        propidx <- grep(gene, prop$GENEID)
+        props <- c()
+        plist <- data.frame(matrix(NA, ncol = ncol(prop)))
+        colnames(plist) <- colnames(prop)
+        count <- 1
+        for(i in propidx) {
+            plist[count,] <- prop[i,]
+            count <- count + 1
+        }
+        print(plist)
+        print(transcripts)
+        count <- 1
+        #fix ordering of props
+        for (i in transcripts) {
+           for (j in 1:nrow(plist)) {
+               if (i == plist$TXNAME[j]) {
+                   props[count] <- round(as.double(plist$prop[j]), digit = 2)
+                   print(props[count])
+                   count <- count + 1
+               } else {
+                   next
+               }
+           }
+        }
+        if (length(props) > 4) {
+            if (length(props) > 6) {
+                font.size = 0.6
+            } else {
+                font.size = 0.8
+            }
+        } else {
+            font.size = 1
+        }
+        axis(side = 4,
+             at = 1:length(propidx),
+             labels = props,
+             cex.axis = font.size
+        )
+        mtext("Isoform Proportion",
+              side = 3,
+              adj = 1.45,
+              padj = -1.2
+        )
+        mtext("Isoform",
+              side = 3,
+              padj = -1.2, 
+              adj = -0.3,
+              
+        )
+        
+        return(list(xrange = xlimit, transcripts = transcripts, props = plist)) 
     }
-    return(list(xrange = xlimit, transcripts = transcripts)) 
 }
 
 plotVen <- function(left, center, right, title, labl = NULL, labc = NULL, labr = NULL) {
@@ -101,31 +198,6 @@ plotVen <- function(left, center, right, title, labl = NULL, labc = NULL, labr =
     text(80, -30, paste(labr))
 }
 
-regTx <- function(DEX) {
-    # upReg <- sum(DEX == 1)
-    # downReg <- sum(DEX == -1)
-    # noSig <- sum(DEX == 0)
-    
-    upRegTx <- c()
-    downRegTx <- c()
-    noSigTx <- c()
-    for (i in 1:nrow(DEX)) {
-        if (DEX[[i]] == 1) {
-            upRegTx[i] <- rownames(DEX)[i]
-        } else if (DEX[[i]] == -1) {
-            downRegTx[i] <- rownames(DEX)[i]
-        } else if (DEX[[i]] == 0) {
-            noSigTx[i] <- rownames(DEX)[i]
-        }
-    }
-    
-    list(
-        upReg = ramna(upRegTx),
-        downReg = ramna(downRegTx),
-        noSig = ramna(noSigTx)
-    )
-} 
-
 ramna <- function(x) {
     y <- NULL
     count <- 1
@@ -138,6 +210,22 @@ ramna <- function(x) {
         }
     }
     return(y)
+}
+
+nan.to.zero <- function(x) {
+    y <- NULL
+    count <- 1
+    for (i in x) {
+        if (is.nan(i)) {
+            y[count] <- 0
+            count <- count + 1
+        } else {
+            y[count] <- i
+            count <- count + 1
+        }
+    }
+    return(y)
+
 }
 
 compareReg <- function(set1, set2) {
@@ -186,3 +274,89 @@ compareReg <- function(set1, set2) {
     
     return(reg)
 }
+
+getUniqueReg <- function(reg, compReg) {
+    regUpUnique <- c()
+    count <- 1
+    for (i in reg) {
+        test <- sum(compReg == i)
+        if (test == 1) {
+            next
+        } else {
+            regUpUnique[count] <- i
+            count <- count + 1
+        }
+    }
+    return(regUpUnique)
+}
+
+getGeneIDsRegUnique <- function(regUnique, master, geneLookup, n) {
+    count <- 1
+    for(i in regUnique) {
+        for(j in 1:nrow(geneLookup)) {
+            if (i == geneLookup$TXNAME[j]) {
+                master[[n]][count,] <- geneLookup[j,]
+                count <- count + 1
+            } else {
+                next
+            }
+        }
+    }
+    return(master)
+}
+
+regUnique <- function(reg1, reg2, compReg, master, geneLookup, setNames = NULL) {
+    print("Starting Reg1")
+    regUpUnique1 <- getUniqueReg(reg1, compReg)
+    print("Reg1 complete")
+    print("Starting Reg2")
+    regUpUnique2 <- getUniqueReg(reg2, compReg)
+    print("Reg2 complete")
+    
+    print("Starting Gene Lookup")
+    master <- getGeneIDsRegUnique(regUpUnique1, master, geneLookup, 1)
+    print("Reg1 complete")
+    print("Starting Reg2")
+    master <- getGeneIDsRegUnique(regUpUnique2, master, geneLookup, 2)
+    print("Reg2 complete")
+    print("Starting Comp")
+    master <- getGeneIDsRegUnique(compReg, master, geneLookup, 3)
+    print("Comp Complete")
+    
+    if (!is.null(setNames)) {
+        names(master) <- setNames
+    }
+    
+    return(master)
+}
+
+isoformProp2 <- function(counts) {
+    len <- nrow(counts)
+    props <- data.frame(TXNAME = NA, GENEID = NA, genetotal = NA, isototal = NA, prop = NA)
+    genes <- unique(counts$GENEID)
+    count <- 1
+    for(gene in genes) {
+        set <- counts[counts$GENEID == gene,]
+        genetotal <- sum(set[,3:ncol(set)])
+        for(i in 1:nrow(set)) {
+            props[count,] <- c(set$TXNAME[i],
+                               set$GENEID[i],
+                               genetotal,
+                               sum(set[i,3:ncol(set)]),
+                               sum(set[i,3:ncol(set)])/genetotal
+            )
+            count <- count + 1
+            if (count > len*0.25) {
+                print("--- 25% complete ---")
+            } else if (count > len*0.5) {
+                print("--- 50% complete ---")
+            } else if (count > len*0.75) {
+                print("--- 75% complete ---")
+            }
+        }
+    }
+    return(props)
+}
+
+
+
