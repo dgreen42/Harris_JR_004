@@ -1,7 +1,8 @@
 # These are utility functions
+library(RColorBrewer)
 
 plotSpliceReg <- function(data, set, GeneID) {
-    par(mai = c(1.02,0.82,0.82,0.42))
+    par(mai = c(1.02,0.82,0.82,0.42), xpd = F)
     isoforms <- data[data$GENEID == GeneID,]
     barplot(isoforms$logFC,
             main = paste0("LFC of ", GeneID, "\n", set),
@@ -20,6 +21,7 @@ plotSpliceReg <- function(data, set, GeneID) {
 }
 
 plotIsoform <- function(gene, isoforms = NULL, annotation, exon_marker = F, prop = NULL) {
+    par(xpd = F)
     grepd <- system2("grep", args = paste(gene, annotation), stdout = T)
     rawFeatures <- strsplit(grepd, split = "\t")
     featureFrame <- data.frame(matrix(NA, ncol = length(rawFeatures[[1]]), nrow = length(rawFeatures)))
@@ -358,5 +360,179 @@ isoformProp2 <- function(counts) {
     return(props)
 }
 
+plotPropComp <- function(propTable, gene) {
+    subset <- propTable[propTable$GENEID == gene,]
+    complist <- c()
+    count <- 1
+    for(i in 1:nrow(subset)) {
+        for (j in 3:ncol(subset)) {
+            complist[count] <-subset[i,j]
+            count <- count + 1
+        }
+    }
+    div <- length(complist) / nrow(subset)
+    cols <- c()
+    for(i in 1:nrow(subset)) {
+        cols <- append(cols, rep(colors()[i*4], div))
+    }
+    barplot(complist,
+            width = 1,
+            cex.names = 0.6,
+            col = cols
+    )
+    namelocs <- c()
+    for(i in 1:nrow(subset)) {
+        namelocs[i] <- div * i 
+    }
+    axis(1,
+         at = namelocs,
+         labels = subset$TXNAME,
+         cex.axis = 0.5
+    )
+}
 
+plotPropCompSep <- function(propTable, gene) {
+    subset <- propTable[propTable$GENEID == gene,]
+    layout(matrix(1:4, ncol = 4, nrow = 1))
+    par(mai = c(1.3, 0.5, 0.8, 0.5))
+    title("Transcript Proportions Across Tissues")
+    barplot(subset$NOD, main = "NOD", ylim = c(0,0.6),
+            names.arg = subset$TXNAME,
+            cex.names = 0.8,
+            las = 2,
+    )
+    barplot(subset$IRT, main = "IRT", ylim = c(0,0.6),
+            names.arg = subset$TXNAME,
+            cex.names = 0.8,
+            las = 2,
+    )
+    barplot(subset$MRT, main = "MRT", ylim = c(0,0.6),
+            names.arg = subset$TXNAME,
+            cex.names = 0.8,
+            las = 2,
+    )
+    barplot(subset$all, main = "ALL", ylim = c(0,0.6),
+            names.arg = subset$TXNAME,
+            cex.names = 0.8,
+            las = 2,
+    )
+}
+
+plotPropHeatamp <- function(propTable, gene) {
+    subset <- propTable[propTable$GENEID == gene,]
+    propMat <- matrix(0, nrow = nrow(subset), ncol = ncol(subset) - 2)
+    for (i in 1:nrow(subset)) {
+        for (j in 3:ncol(subset)) {
+            propMat[i,j - 2] <- as.numeric(subset[i,j])
+        }
+    }
+    rownames(propMat) <- subset$TXNAME
+    colnames(propMat) <- colnames(subset[,3:ncol(subset)])
+    n <- 10
+    nums <- round(seq(0, 1, length.out = n), digit = 1)
+    cols <- hcl.colors(n, palette = "Reds")
+    hm <- heatmap(
+        propMat, Rowv = NA, Colv = NA, col = cols,
+        cexRow = 0.8,
+        cexCol = 0.8,
+    )
+    legend("bottomleft",
+           legend = nums,
+           col = c(cols),
+           pch = 15,
+           pt.cex = 3
+    )
+    return(hm)
+}
+
+plotHeatmapIso <- function(propTable, gene, color) {
+    if (!is.data.frame(propTable)) {
+        stop("must provide a data.frame")
+    } else {
+        subset <- propTable[propTable$GENEID == gene,]
+        propMat <- matrix(0, nrow = nrow(subset), ncol = ncol(subset) - 2)
+        for (i in 1:nrow(subset)) {
+            for (j in 3:ncol(subset)) {
+                propMat[i,j - 2] <- as.numeric(subset[i,j])
+            }
+        }
+        rownames(propMat) <- subset$TXNAME
+        colnames(propMat) <- colnames(subset[,3:ncol(subset)])
+        
+        divx <- seq(1, ncol(propMat))
+        divy <- seq(1, nrow(propMat))
+        xlimit = c(0, ncol(propMat))
+        ylimit = c(0, nrow(propMat))
+        par(xpd = T, mai = c(0.5, 2, 0.3, 1))
+        plot(NA, xlim = xlimit, ylim = ylimit,  bty = "n", xaxt = "n", yaxt = "n",
+             xlab = NA, ylab = NA)
+        xaxisat <- 1:ncol(propMat) - 0.5
+        yaxisat <- 1:nrow(propMat) - 0.5
+        axis(1, at = xaxisat, labels = colnames(propMat), padj = -2, tick = F)
+        axis(2, at = yaxisat, labels = rownames(propMat), tick = F, las = 2)
+        propMat100 <- round(propMat * 100, digit = 0) + 1
+        colors <- colorRampPalette(color)(max(propMat100))
+        for (i in divx) {
+            for (j in divy) {
+                polygon(
+                    x = c(i - 1, i, i, i - 1),
+                    y = c(j - 1, j - 1, j, j),
+                    col = colors[propMat100[j,i]]
+                )
+            }
+        }
+        nums <- round(seq(0, max(propMat), length.out = 10), digit = 2)
+        lcolnums <- round(seq(1, length(colors), by = length(colors)/length(nums)), digit = 0)
+        lcol <- c()
+        count <- 1
+        for(i in lcolnums) {
+            lcol[count] <- colors[i]
+            count <- count + 1
+        }
+        xmin <- max(xlimit) + 0.25
+        xmax <- max(xlimit) + 1.25
+        ymin <- max(ylimit) * 0.2
+        ymax <- max(ylimit) * 0.92
+        xleg <- c(xmin, xmax, xmax, xmin)
+        yleg <- c(ymin, ymin, ymax, ymax)
+        polygon(x = xleg,
+                y = yleg
+        )
+        xadd <- 0.25
+        yadd <- 0.1
+        xsizer <- 0.2
+        ysizer <- max(ylimit) *0.0667
+        for(i in 1:length(nums)) {
+            xcoord <- xmin + xadd
+            ycoord <- ymin + yadd
+            polygon(x = c(xcoord, xcoord + xsizer, xcoord + xsizer, xcoord),
+                    y = c(ycoord, ycoord, ycoord + ysizer, ycoord + ysizer),
+                    col = lcol[i]
+            )
+            text(x = xcoord + xsizer + 0.25,
+                 y = ycoord + ysizer - 0.1,
+                 labels = nums[i]
+            )
+            yadd <- yadd + ysizer
+        }
+        # legend(x = xleg,
+        #        y = yleg,
+        #        inset = c(-0.2,0),
+        #        legend = nums,
+        #        col = lcol,
+        #        pch = 15,
+        #        pt.cex = 3
+        # )
+    }
+    
+    returnl <- list(
+        propMat = propMat,
+        xlim = xlimit,
+        ylim = ylimit,
+        xleglim = xleg,
+        yleglim = yleg
+    )
+    
+    return(returnl)
+}
 

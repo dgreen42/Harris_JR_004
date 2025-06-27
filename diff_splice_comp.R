@@ -170,7 +170,9 @@ plotIsoform(gene = "MtrunA17_Chr8g0344721", annotation = "./bambu_out_NDR_3/Harr
 plotSpliceReg(niLFC, "NODvsIRT", "gene_biotype mRNA; MtrunA17_Chr8g0344721")
 
 dev.off()
+layout(matrix(c(1,2), nrow = 1, ncol = 2))
 plotIsoform(gene = "MtrunA17_Chr8g0344721", annotation = "./bambu_out_NDR_3/Harris_JR_RNA_004_NDR_3_extended_anntation.gtf", exon_marker = T, prop = isoProps)
+plotHeatmapIso(propTable, "gene_biotype mRNA; MtrunA17_Chr8g0344721", c("blue", "yellow"))
 
 ## NODvsMRT ----
 
@@ -391,3 +393,36 @@ for (i in ninmCompReg$up) {
     plotIsoform(gene = i, annotation = "./bambu_out_NDR_3/Harris_JR_RNA_004_NDR_3_extended_anntation.gtf")
 }
 
+
+# Comp Props ----
+
+NODprop <- read.csv("./isoform_proportions NOD")
+IRTprop <- read.csv("./isoform_proportions IRT")
+MRTprop <- read.csv("./isoform_proportions MRT")
+allprop <- read.csv("./isoform_proportions.csv")
+
+NODprop <- NODprop[,2:ncol(NODprop)]
+IRTprop <- IRTprop[,2:ncol(IRTprop)]
+MRTprop <- MRTprop[,2:ncol(MRTprop)]
+allprop <- allprop[,2:ncol(allprop)]
+
+NODprop$prop <- nan.to.zero(NODprop$prop)
+IRTprop$prop <- nan.to.zero(IRTprop$prop)
+MRTprop$prop <- nan.to.zero(MRTprop$prop)
+allprop$prop <- nan.to.zero(allprop$prop)
+
+propTable <- data.frame(TXNAME = NODprop$TXNAME, GENEID = NODprop$GENEID,
+                        NOD = NODprop$prop,
+                        IRT = IRTprop$prop,
+                        MRT = MRTprop$prop,
+                        ALL = allprop$prop
+)
+
+gene = "gene_biotype mRNA; MtrunA17_Chr2g0322801"
+
+plotPropComp(propTable, gene)
+
+plotPropCompSep(propTable, gene)
+
+plotHeatmapIso(propTable[,], gene, c("blue", "pink"))
+plotHeatmapIso(propTable, "gene_biotype mRNA; MtrunA17_Chr8g0344721", c("blue", "yellow"))
