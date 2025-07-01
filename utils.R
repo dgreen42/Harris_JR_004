@@ -154,7 +154,7 @@ plotIsoform <- function(gene, isoforms = NULL, annotation, exon_marker = F, prop
            }
         }
         if (length(props) > 4) {
-            if (length(props) > 6) {
+            if (length(props) >= 6) {
                 font.size = 0.6
             } else {
                 font.size = 0.8
@@ -167,7 +167,7 @@ plotIsoform <- function(gene, isoforms = NULL, annotation, exon_marker = F, prop
              labels = props,
              cex.axis = font.size
         )
-        mtext("Isoform Proportion",
+        mtext("Isoform Proportion (all)",
               side = 3,
               adj = 1.45,
               padj = -1.2
@@ -191,13 +191,13 @@ plotVen <- function(left, center, right, title, labl = NULL, labc = NULL, labr =
          bty = "n")
     points(35, 40, cex = 40, col = rgb(1,0,0,0.5), pch = 16)
     points(65, 40, cex = 40, col = rgb(0,0,1,0.5), pch = 16)
-    text(20, 40, paste(left))
-    text(50, 40, paste(center))
-    text(80, 40, paste(right))
+    text(20, 40, paste(left), cex = 2)
+    text(50, 40, paste(center), cex = 2)
+    text(80, 40, paste(right), cex = 2)
     title(paste(title))
-    text(20, -30, paste(labl))
-    text(50, -30, paste(labc))
-    text(80, -30, paste(labr))
+    text(20, -30, paste(labl), cex = 1.5)
+    text(50, -30, paste(labc), cex = 1.5)
+    text(80, -30, paste(labr), cex = 1.5)
 }
 
 ramna <- function(x) {
@@ -348,11 +348,11 @@ isoformProp2 <- function(counts) {
                                sum(set[i,3:ncol(set)])/genetotal
             )
             count <- count + 1
-            if (count > len*0.25) {
+            if (count > len*0.25 && count < len*0.251) {
                 print("--- 25% complete ---")
-            } else if (count > len*0.5) {
+            } else if (count > len*0.5 && count < len*0.51) {
                 print("--- 50% complete ---")
-            } else if (count > len*0.75) {
+            } else if (count > len*0.75 && count < len*0.751) {
                 print("--- 75% complete ---")
             }
         }
@@ -536,3 +536,27 @@ plotHeatmapIso <- function(propTable, gene, color) {
     return(returnl)
 }
 
+regTx <- function(DEX) {
+    # upReg <- sum(DEX == 1)
+    # downReg <- sum(DEX == -1)
+    # noSig <- sum(DEX == 0)
+    
+    upRegTx <- c()
+    downRegTx <- c()
+    noSigTx <- c()
+    for (i in 1:nrow(DEX)) {
+        if (DEX[[i]] == 1) {
+            upRegTx[i] <- rownames(DEX)[i]
+        } else if (DEX[[i]] == -1) {
+            downRegTx[i] <- rownames(DEX)[i]
+        } else if (DEX[[i]] == 0) {
+            noSigTx[i] <- rownames(DEX)[i]
+        }
+    }
+    
+    list(
+        upReg = ramna(upRegTx),
+        downReg = ramna(downRegTx),
+        noSig = ramna(noSigTx)
+    )
+}

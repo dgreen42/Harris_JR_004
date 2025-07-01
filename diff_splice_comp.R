@@ -102,8 +102,7 @@ write.csv(niSpliceDE, "./NODvsMRT/NODvsMRT_splice_DE.csv")
 library(foreach)
 library(doParallel)
 
-isoProps <- isoformProp2(cts)
-write.csv(isoProps, "./isoform_proportions.csv")
+isoProps <- read.csv("./isoform_props/isoform_proportions_all_norm.csv")
 
 isoProp10 <- isoProps[isoProps$prop > 0.10,]
 isoProp05 <- isoProps[isoProps$prop > 0.05,]
@@ -161,18 +160,19 @@ rownames(niLFC) <- niLFC[,1]
 layout(matrix(c(1,2), nrow = 2, ncol = 1))
 for (i in niSplice$GeneID) {
     plotIsoform(gene = strsplit(i, ";")[[1]][2], annotation = "./bambu_out_NDR_3/Harris_JR_RNA_004_NDR_3_extended_anntation.gtf", exon_marker = F, prop = isoProps)
-    plotSpliceReg(niLFC, "NODvsIRT", i)
+    # plotSpliceReg(niLFC, "NODvsIRT", i)
+    plotHeatmapIso(propTable, i, c("blue", "red", "yellow"))
 }
 
 dev.off()
 layout(matrix(c(1,2), nrow = 2, ncol = 1))
-plotIsoform(gene = "MtrunA17_Chr8g0344721", annotation = "./bambu_out_NDR_3/Harris_JR_RNA_004_NDR_3_extended_anntation.gtf", exon_marker = F, prop = isoProps)
-plotSpliceReg(niLFC, "NODvsIRT", "gene_biotype mRNA; MtrunA17_Chr8g0344721")
+plotIsoform(gene = "MtrunA17_Chr2g0322801", annotation = "./bambu_out_NDR_3/Harris_JR_RNA_004_NDR_3_extended_anntation.gtf", exon_marker = F, prop = isoProps)
+plotSpliceReg(niLFC, "NODvsIRT", "gene_biotype mRNA; MtrunA17_Chr2g0322801")
 
 dev.off()
-layout(matrix(c(1,2), nrow = 1, ncol = 2))
-plotIsoform(gene = "MtrunA17_Chr8g0344721", annotation = "./bambu_out_NDR_3/Harris_JR_RNA_004_NDR_3_extended_anntation.gtf", exon_marker = T, prop = isoProps)
-plotHeatmapIso(propTable, "gene_biotype mRNA; MtrunA17_Chr8g0344721", c("blue", "yellow"))
+layout(matrix(c(1,2), nrow = 2, ncol = 1))
+plotIsoform(gene = "MtrunA17_Chr2g0322801", annotation = "./bambu_out_NDR_3/Harris_JR_RNA_004_NDR_3_extended_anntation.gtf", exon_marker = F, prop = isoProps)
+plotHeatmapIso(propTable, "gene_biotype mRNA; MtrunA17_Chr2g0322801", c("blue", "red", "yellow"))
 
 ## NODvsMRT ----
 
@@ -261,7 +261,7 @@ saveRDS(masterReg, "./masterReg.rds")
 
 ## NODvsIRT X IRTvsMRT ----
 
-png("./comp/NODvsIRTxIRTvsMRTup.png")
+png("./comp/NODvsIRTxIRTvsMRTup.png", width = 500, height = 350, units = "px")
 plotVen(length(niReg$upReg) - length(niimCompReg$up), length(niimCompReg$up), length(imReg$upReg) - length(niimCompReg$up),
         "Upregulated Genes Shared by NODvsIRT and IRTvsMRT",
         labl = "NODvsIRT",
@@ -327,7 +327,7 @@ for (i in niReg$upReg) {
 
 
 
-png("./comp/NODvsIRTxIRTvsMRTdown.png")
+png("./comp/NODvsIRTxIRTvsMRTdown.png", width = 500, height = 350, units = "px")
 plotVen(length(niReg$downReg) - length(niimCompReg$down), length(niimCompReg$down), length(imReg$downReg) - length(niimCompReg$down),
         "Downregulated Genes Shared by NODvsIRT and IRTvsMRT",
         labl = "NODvsIRT",
@@ -343,7 +343,7 @@ for (i in niimCompReg$up) {
 
 ## NODvsIRT X NODvsMRT ----
 
-png("./comp/NODvsIRTxNODvsMRTup.png")
+png("./comp/NODvsIRTxNODvsMRTup.png", width = 500, height = 350, units = "px")
 plotVen(length(niReg$upReg) - length(ninmCompReg$up), length(ninmCompReg$up), length(nmReg$upReg) - length(ninmCompReg$up),
         "Upregulated Genes Shared by NODvsIRT and NODvsMRT",
         labl = "NODvsIRT",
@@ -352,7 +352,7 @@ plotVen(length(niReg$upReg) - length(ninmCompReg$up), length(ninmCompReg$up), le
 )
 dev.off()
 
-png("./comp/NODvsIRTxNODvsMRTdown.png")
+png("./comp/NODvsIRTxNODvsMRTdown.png", width = 500, height = 350, units = "px")
 plotVen(length(niReg$downReg) - length(ninmCompReg$down), length(ninmCompReg$down), length(nmReg$downReg) - length(ninmCompReg$down),
         "Downregulated Genes Shared by NODvsIRT and NODvsMRT",
         labl = "NODvsIRT",
@@ -370,7 +370,7 @@ plotIsoform(gene = "MtrunA17_Chr8g0344721", annotation = "./bambu_out_NDR_3/Harr
 
 ## NODvsMRT X IRTvsMRT ----
 
-png("./comp/NODvsMRTxIRTvsMRTup.png")
+png("./comp/NODvsMRTxIRTvsMRTup.png", width = 500, height = 350, units = "px")
 plotVen(length(nmReg$upReg) - length(nmimCompReg$up), length(nmimCompReg$up), length(imReg$upReg) - length(nmimCompReg$up),
         "Upregulated Genes Shared by NODvsMRT and IRTvsMRT",
         labl = "NODvsMRT",
@@ -379,7 +379,7 @@ plotVen(length(nmReg$upReg) - length(nmimCompReg$up), length(nmimCompReg$up), le
 )
 dev.off()
 
-png("./comp/NODvsMRTxIRTvsMRTdown.png")
+png("./comp/NODvsMRTxIRTvsMRTdown.png", width = 500, height = 350, units = "px")
 plotVen(length(nmReg$downReg) - length(nmimCompReg$down), length(nmimCompReg$down), length(imReg$downReg) - length(nmimCompReg$down),
         "Downregulated Genes Shared by NODvsMRT and IRTvsMRT",
         labl = "NODvsMRT",
@@ -396,20 +396,14 @@ for (i in ninmCompReg$up) {
 
 # Comp Props ----
 
-NODprop <- read.csv("./isoform_proportions NOD")
-IRTprop <- read.csv("./isoform_proportions IRT")
-MRTprop <- read.csv("./isoform_proportions MRT")
-allprop <- read.csv("./isoform_proportions.csv")
+# subsetting
 
-NODprop <- NODprop[,2:ncol(NODprop)]
-IRTprop <- IRTprop[,2:ncol(IRTprop)]
-MRTprop <- MRTprop[,2:ncol(MRTprop)]
-allprop <- allprop[,2:ncol(allprop)]
+###
 
-NODprop$prop <- nan.to.zero(NODprop$prop)
-IRTprop$prop <- nan.to.zero(IRTprop$prop)
-MRTprop$prop <- nan.to.zero(MRTprop$prop)
-allprop$prop <- nan.to.zero(allprop$prop)
+NODprop <- read.csv("./isoform_props/isoform_proportions_NOD_norm.csv")
+IRTprop <- read.csv("./isoform_props/isoform_proportions_IRT_norm.csv")
+MRTprop <- read.csv("./isoform_props/isoform_proportions_MRT_norm.csv")
+allprop <- read.csv("./isoform_props/isoform_proportions_all_norm.csv")
 
 propTable <- data.frame(TXNAME = NODprop$TXNAME, GENEID = NODprop$GENEID,
                         NOD = NODprop$prop,
@@ -426,3 +420,16 @@ plotPropCompSep(propTable, gene)
 
 plotHeatmapIso(propTable[,], gene, c("blue", "pink"))
 plotHeatmapIso(propTable, "gene_biotype mRNA; MtrunA17_Chr8g0344721", c("blue", "yellow"))
+
+## FDR ---
+
+
+propZeros <- propTable[propTable$ALL == 0,]
+propTable0 <- propTable[propTable$ALL != 0,]
+propTable1 <- propTable[propTable$ALL > 0.01,]
+propTable5 <- propTable[propTable$ALL > 0.05,]
+total_rows <- nrow(propTable)
+total_zero <- nrow(propZeros)
+total_rows0 <- nrow(propTable0)
+total_rows1 <- nrow(propTable1)
+total_rows5 <- nrow(propTable5)
