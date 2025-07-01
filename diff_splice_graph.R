@@ -80,7 +80,7 @@ for(i in 1:nrow(subset)) {
         if (con == 1) {
             from <- vert[vert$name == con_id,]
             edges[count,] <- c(from$n, to$n)
-            ecolors[count] <- "#068033"
+            ecolors[count] <- "#ff0019"
             count <- count + 1
         } else if (con == -1) {
             from <- vert[vert$name == con_id,]
@@ -122,7 +122,7 @@ deg.add <- c(rep(10, length(genes)), rep(6, nrow(vert) - length(genes)))
 par(xpd = T)
 plot(g,
      layout = lay,
-     edge.width = 1.5,
+     edge.width = 2.5,
      edge.arrow.size = 0.3,
      edge.color = ecolors,
      vertex.label = vert$reallyshortname,
@@ -132,7 +132,7 @@ plot(g,
      asp = -5
      )
 
-legend("bottomleft",
+legend("topright",
        title = "Edges",
        legend = c("Induced/Activates", "Respresses/Inhibits"),
        col = c("#068033", "#192bcf"),
