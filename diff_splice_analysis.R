@@ -20,6 +20,39 @@ filterLowcts <- filterByExpr(dge, design = expDesign)
 dge <- dge[filterLowcts, ]
 dge <- normLibSizes(dge)
 dge <- estimateDisp(dge)
+
+saveRDS(dge, "./edgeR_dge.rds")
+dge <- readRDS("./edgeR_dge.rds")
+cts <- data.frame(TXNAME = dge$genes$TXNAME,
+                       GENEID = dge$genes$GENEID,
+                       CINOD = dge$counts[,1],
+                       CIRTJ = dge$counts[,2],
+                       CMRTJ = dge$counts[,3],
+                       DINOD = dge$counts[,4],
+                       DIRTJ = dge$counts[,5],
+                       DMRTJ = dge$counts[,6],
+                       EINOD = dge$counts[,7],
+                       EIRTJ = dge$counts[,8],
+                       EMRTJ = dge$counts[,9]
+)
+norm_cts <- data.frame(matrix(NA, nrow = nrow(cts), ncol = ncol(cts)))
+colnames(norm_cts) <- colnames(cts)
+norm_cts$TXNAME = cts$TXNAME
+norm_cts$GENEID = cts$GENEID
+for(i in 1:nrow(norm_cts)) {
+    norm_cts[i,3:ncol(norm_cts)] <- cts[i,3:ncol(cts)] * dge$samples$norm.factors
+}
+write.csv(norm_cts, "./bambu_out_NDR_3/norm_trans_cts.csv", row.names = F)
+nod_norm <- data.frame(TXNAME = norm_cts$TXNAME, GENEID = norm_cts$GENEID,
+                       CINOD = norm_cts$CINOD, DINOD = norm_cts$DINOD, EINOD = norm_cts$EINOD)
+write.csv(nod_norm, "./subsets/NOD_norm.csv", row.names = F)
+irt_norm <- data.frame(TXNAME = norm_cts$TXNAME, GENEID = norm_cts$GENEID,
+                       CIRTJ = norm_cts$CIRTJ, DIRTJ = norm_cts$DIRTJ, EIRTJ = norm_cts$EIRTJ)
+write.csv(irt_norm, "./subsets/IRT_norm.csv", row.names = F)
+mrt_norm <- data.frame(TXNAME = norm_cts$TXNAME, GENEID = norm_cts$GENEID,
+                       CMRTJ = norm_cts$CMRTJ, DMRTJ = norm_cts$DMRTJ, EMRTJ = norm_cts$EMRTJ)
+write.csv(mrt_norm, "./subsets/MRT_norm.csv", row.names = F)
+
 fit <- glmQLFit(dge, design = expDesign, robust = TRUE)
 saveRDS(fit, "./edgeR_glm_fit.rds")
 

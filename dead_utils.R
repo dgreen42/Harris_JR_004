@@ -1,30 +1,5 @@
 # These are utility functions that are not used anymore
 
-regTx <- function(DEX) {
-    # upReg <- sum(DEX == 1)
-    # downReg <- sum(DEX == -1)
-    # noSig <- sum(DEX == 0)
-    
-    upRegTx <- c()
-    downRegTx <- c()
-    noSigTx <- c()
-    for (i in 1:nrow(DEX)) {
-        if (DEX[[i]] == 1) {
-            upRegTx[i] <- rownames(DEX)[i]
-        } else if (DEX[[i]] == -1) {
-            downRegTx[i] <- rownames(DEX)[i]
-        } else if (DEX[[i]] == 0) {
-            noSigTx[i] <- rownames(DEX)[i]
-        }
-    }
-    
-    list(
-        upReg = ramna(upRegTx),
-        downReg = ramna(downRegTx),
-        noSig = ramna(noSigTx)
-    )
-}
-
 isoformProp <- function(counts, subset = NULL) {
     current <- NULL
     after <- NULL

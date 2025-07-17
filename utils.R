@@ -189,8 +189,8 @@ plotVen <- function(left, center, right, title, labl = NULL, labc = NULL, labr =
          xlab = NA, ylab = NA,
          xaxt = "n", yaxt = "n",
          bty = "n")
-    points(35, 40, cex = 40, col = rgb(1,0,0,0.5), pch = 16)
-    points(65, 40, cex = 40, col = rgb(0,0,1,0.5), pch = 16)
+    points(35, 40, cex = 40, col = rgb(252, 211, 3, 150, maxColorValue = 255), pch = 16)
+    points(65, 40, cex = 40, col = rgb(3, 78, 252, 150, maxColorValue = 255), pch = 16)
     text(20, 40, paste(left), cex = 2)
     text(50, 40, paste(center), cex = 2)
     text(80, 40, paste(right), cex = 2)
@@ -236,9 +236,9 @@ compareReg <- function(set1, set2) {
         downReg = NA,
         noSig = NA
     )
-    countup <- 1
-    countdown <- 1
-    countnosig <- 1
+    countup <- 0
+    countdown <- 0
+    countnosig <- 0
     reg <- list(
         up = c(),
         down = c(),
@@ -247,18 +247,19 @@ compareReg <- function(set1, set2) {
     for (i in set1$upReg) {
         for(j in set2$upReg) {
             if (i == j) {
-                reg$up[countup] <- i
                 countup <- countup + 1
+                reg$up[countup] <- i
             }
         }
     }
+    
     summary$upReg <- countup
     
     for (i in set1$downReg) {
         for(j in set2$downReg) {
             if (i == j) {
-                reg$down[countdown] <- i
                 countdown <- countdown + 1
+                reg$down[countdown] <- i
             }
         }
     }
@@ -293,16 +294,20 @@ getUniqueReg <- function(reg, compReg) {
 }
 
 getGeneIDsRegUnique <- function(regUnique, master, geneLookup, n) {
-    count <- 1
-    for(i in regUnique) {
-        for(j in 1:nrow(geneLookup)) {
-            if (i == geneLookup$TXNAME[j]) {
-                master[[n]][count,] <- geneLookup[j,]
-                count <- count + 1
-            } else {
-                next
+    if (length(regUnique) != 0) {
+        count <- 1
+        for(i in regUnique) {
+            for(j in 1:nrow(geneLookup)) {
+                if (i == geneLookup$TXNAME[j]) {
+                    master[[n]][count,] <- geneLookup[j,]
+                    count <- count + 1
+                } else {
+                    next
+                }
             }
         }
+    } else {
+        print("Comp Reg has no length")
     }
     return(master)
 }
@@ -315,15 +320,15 @@ regUnique <- function(reg1, reg2, compReg, master, geneLookup, setNames = NULL) 
     regUpUnique2 <- getUniqueReg(reg2, compReg)
     print("Reg2 complete")
     
-    print("Starting Gene Lookup")
+    print("Starting Gene Lookup 1")
     master <- getGeneIDsRegUnique(regUpUnique1, master, geneLookup, 1)
-    print("Reg1 complete")
-    print("Starting Reg2")
+    print("Lookup 1 complete")
+    print("Starting Lookup 2")
     master <- getGeneIDsRegUnique(regUpUnique2, master, geneLookup, 2)
-    print("Reg2 complete")
-    print("Starting Comp")
+    print("Lookup 2 complete")
+    print("Starting Comp Lookup")
     master <- getGeneIDsRegUnique(compReg, master, geneLookup, 3)
-    print("Comp Complete")
+    print("Comp Lookup Complete")
     
     if (!is.null(setNames)) {
         names(master) <- setNames
@@ -559,4 +564,41 @@ regTx <- function(DEX) {
         downReg = ramna(downRegTx),
         noSig = ramna(noSigTx)
     )
+}
+
+initDiagnosicTalbe <- function() {
+    return(
+        data.frame(
+            sample = NULL,
+            passRation = NULL,
+            meanLen = NULL,
+            medianLen = NULL,
+            maxLen = NULL,
+            minLen = NULL,
+            medianQScore = NULL,
+            N50 = NULL
+        )
+    )
+}
+            
+rnaDiagnosicSummary <- function(summary, file) {
+    passfilter <- summary$passes_filtering == T
+    name <- strsplit(strsplit(file, "/")[[1]][5], "_")[[1]][1]
+    summary <- data.frame(
+        sample = name,
+        passRation = sum(passfilter) / nrow(summary),
+        meanLen = mean(summary$sequence_length_template[passfilter]),
+        medianLen = median(summary$sequence_length_template[passfilter]),
+        maxLen = max(summary$sequence_length_template[passfilter]),
+        minLen = min(summary$sequence_length_template[passfilter]), 
+        medianQScore = round(median(summary$mean_qscore_template[passfilter]), digits = 2),
+        N50 = getNstat(summary, passfilter, 50)
+        )
+    return(summary)
+}
+
+getNstat <- function(summary, filter, N) {
+    lens <- as.numeric(sort(summary$sequence_length_template[passfilter], decreasing = T))
+    idx <- which(cumsum(lens) / sum(lens) >= 50/100)[1]
+    lens[idx]
 }

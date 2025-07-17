@@ -155,6 +155,9 @@ write.csv(imSpliceDE, "./IRTvsMRT/IRTvsMRT_splice_DE.csv")
 
 rownames(niLFC) <- niLFC[,1]
 
+plotIsoform("MtrunA17_Chr6g0464751", annotation = "./bambu_out_NDR_3/Harris_JR_RNA_004_NDR_3_extended_anntation.gtf", exon_marker = T, prop = isoProps)
+plotHeatmapIso(propTable, "gene_biotype mRNA; MtrunA17_Chr6g0464751", c("blue", "red", "yellow"))
+
 ## NODvsIRT ----
 
 layout(matrix(c(1,2), nrow = 2, ncol = 1))
@@ -222,6 +225,16 @@ summary(niDEX)
 niReg <- regTx(niDEX)
 head(niReg)
 
+## IRTvsNOD ----
+
+IRTvsNOD <- makeContrasts(irt-nod, levels = fit$design)
+qlfIRTvsNOD <- glmQLFTest(fit, contrast = IRTvsNOD)
+inDEX <- decideTests(qlfIRTvsNOD, p = 0.05)
+summary(inDEX)
+
+inReg <- regTx(inDEX)
+head(inReg)
+
 ## NODvsMRT ----
 
 NODvsMRT <- makeContrasts(nod-mrt, levels = fit$design)
@@ -230,6 +243,16 @@ nmDEX <- decideTests(qlfNODvsMRT, p = 0.05)
 summary(nmDEX)
 
 nmReg <- regTx(nmDEX)
+head(nmReg)
+
+## MRTvsNOD ----
+
+MRTvsNOD <- makeContrasts(mrt-nod, levels = fit$design)
+qlfMRTvsNOD <- glmQLFTest(fit, contrast = MRTvsNOD)
+mnDEX <- decideTests(qlfMRTvsNOD, p = 0.05)
+summary(mnDEX)
+
+mnReg <- regTx(mnDEX)
 head(nmReg)
 
 ## IRTvsMRT ----
@@ -242,22 +265,107 @@ summary(imDEX)
 imReg <- regTx(imDEX)
 head(imReg)
 
+## MRTvsIRT ----
+
+MRTvsIRT <- makeContrasts(mrt-irt, levels = fit$design)
+qlfMRTvsIRT <- glmQLFTest(fit, contrast = MRTvsIRT)
+miDEX <- decideTests(qlfMRTvsIRT, p = 0.05)
+summary(miDEX)
+
+miReg <- regTx(miDEX)
+head(miReg)
+
 # Comp ----
 
+# reciprocal
+
+niinCompReg <- compareReg(niReg, inReg)
+miimCompReg <- compareReg(miReg, imReg)
+nmmnCompReg <- compareReg(nmReg, mnReg)
+
+# ---
+
+# these don't really make sense
 niimCompReg <- compareReg(niReg, imReg)
 ninmCompReg <- compareReg(niReg, nmReg)
+inimCompReg <- compareReg(inReg, imReg)
+
+
+# standard format with comparable contrasts
 nmimCompReg <- compareReg(nmReg, imReg)
+nimiCompReg <- compareReg(niReg, miReg)
+inmnCompReg <- compareReg(inReg, mnReg)
+niinCompReg <- compareReg(niReg, inReg)
+miimCompReg <- compareReg(miReg, imReg)
+nmmnCompReg <- compareReg(nmReg, mnReg)
 
 masterReg <- list(
     NODvsIRT = niReg,
     NODvsMRT = nmReg,
     IRTvsMRT = imReg,
-    NIxIM = niimCompReg,
-    NIxNM = ninmCompReg,
-    NMxIM = nmimCompReg
+    IRTvsNOD = inReg,
+    MRTvsNOD = mnReg,
+    MRTvsIRT = miReg,
+    NMxIM = nmimCompReg,
+    NIxMI = nimiCompReg,
+    INxMN = inmnCompReg,
+    NIxIN = niinCompReg,
+    MIxIM = miimCompReg,
+    NMxMN = nmmnCompReg
 )
 
 saveRDS(masterReg, "./masterReg.rds")
+
+masterReg <- readRDS("./masterReg.rds")
+
+## Self Comp ----
+
+#niin
+
+plotVen(length(niReg$upReg) - length(niinCompReg$up), length(niinCompReg$up), length(inReg$upReg) - length(niinCompReg$up),
+        "Upregulated Genes Shared by NODvsIRT and IRTvsNOD",
+        labl = "NODvsIRT",
+        labc = "Both",
+        labr = "IRTvsNOD"
+)
+
+#miim
+
+plotVen(length(miReg$upReg) - length(miimCompReg$up), length(miimCompReg$up), length(imReg$upReg) - length(miimCompReg$up),
+        "Upregulated Genes Shared by MRTvsIRT and IRTvsMRT",
+        labl = "MRTvsIRT",
+        labc = "Both",
+        labr = "IRTvsMRT"
+)
+
+miimRegUpUnique <- list(
+    miRegUpUnique = data.frame(TXNAME = NA, GENEID = NA),
+    imRegUpUnique = data.frame(TXNAME = NA, GENEID = NA),
+    miimRegUpUnique = data.frame(TXNAME = NA, GENEID = NA)
+)
+
+miimRegUpUnique <- regUnique(miReg$upReg, imReg$upReg, miimCompReg$up,
+                             miimRegUpUnique, geneLookup)
+
+## IRTvsNOD X IRTvsMRT ----
+
+png("./comp/IRTvsNODxIRTvsMRTup.png", width = 500, height = 350, units = "px")
+plotVen(length(inReg$upReg) - length(inimCompReg$up), length(inimCompReg$up), length(imReg$upReg) - length(inimCompReg$up),
+        "Upregulated Genes Shared by IRTvsNOD and IRTvsMRT",
+        labl = "IRTvsNOD",
+        labc = "Both",
+        labr = "IRTvsMRT"
+)
+dev.off()
+
+png("./comp/IRTvsNODxIRTvsMRTdown.png", width = 500, height = 350, units = "px")
+plotVen(length(inReg$upReg) - length(inimCompReg$down), length(inimCompReg$down), length(imReg$downReg) - length(inimCompReg$down),
+        "Downregulated Genes Shared by IRTvsNOD and IRTvsMRT",
+        labl = "IRTvsNOD",
+        labc = "Both",
+        labr = "IRTvsMRT"
+)
+dev.off()
 
 ## NODvsIRT X IRTvsMRT ----
 
@@ -301,17 +409,6 @@ for (i in imReg$upReg) {
     }
 }
 
-count <- 1
-for(i in imRegUpUnique) {
-    for(j in 1:nrow(geneLookup)) {
-        if (i == geneLookup$TXNAME[j]) {
-            niimRegUnique$imRegUpUnique[count,] <- geneLookup[j,]
-            count <- count + 1
-        } else {
-            next
-        }
-    }
-}
 
 niRegUpUnique <- c()
 count <- 1
